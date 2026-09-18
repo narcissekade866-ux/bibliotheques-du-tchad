@@ -1,1 +1,21 @@
 *Zone.Identifier*
+
+# Dépendances
+node_modules/
+
+# Environnement
+.env
+.env.local
+
+# Builds
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Éditeurs / OS
+.DS_Store
+.vscode/
+
