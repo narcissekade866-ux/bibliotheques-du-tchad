@@ -54,6 +54,9 @@ const listQuerySchema = z.object({
     .enum(['brouillon', 'en_attente', 'valide', 'rejete'])
     .optional(),
   q: z.string().max(200).optional(),
+  lat: z.coerce.number().min(-90).max(90).optional(),
+  lng: z.coerce.number().min(-180).max(180).optional(),
+  rayon: z.coerce.number().min(100).max(50000).default(5000),
 });
 
 module.exports = {

@@ -81,19 +81,31 @@ async function getById(id, userRole) {
     return null;
   }
 
-  const loc = await pool.query(
-    `SELECT l.*, v.nom AS ville_nom, s.nom AS subdivision_nom
-     FROM localisation l
-     JOIN ville v ON v.id = l.ville_id
-     LEFT JOIN subdivision_administrative s ON s.id = l.subdivision_id
-     WHERE l.bibliotheque_id = $1`,
-    [id]
+  const sections = [
+    { key: 'localisation', query: `SELECT l.*, v.nom AS ville_nom, s.nom AS subdivision_nom FROM localisation l JOIN ville v ON v.id = l.ville_id LEFT JOIN subdivision_administrative s ON s.id = l.subdivision_id WHERE l.bibliotheque_id = $1` },
+    { key: 'horaires', query: 'SELECT * FROM horaires WHERE bibliotheque_id = $1 ORDER BY ARRAY_POSITION(ARRAY[\'lundi\',\'mardi\',\'mercredi\',\'jeudi\',\'vendredi\',\'samedi\',\'dimanche\']::jour_semaine[], jour)', multi: true },
+    { key: 'conditions_acces', query: 'SELECT * FROM conditions_acces WHERE bibliotheque_id = $1' },
+    { key: 'pret_consultation', query: 'SELECT * FROM pret_consultation WHERE bibliotheque_id = $1' },
+    { key: 'public_frequentation', query: 'SELECT * FROM public_frequentation WHERE bibliotheque_id = $1' },
+    { key: 'collection_catalogue', query: 'SELECT * FROM collection_catalogue WHERE bibliotheque_id = $1' },
+    { key: 'services', query: 'SELECT * FROM services WHERE bibliotheque_id = $1' },
+    { key: 'activites', query: 'SELECT * FROM activite WHERE bibliotheque_id = $1', multi: true },
+    { key: 'infrastructure', query: 'SELECT * FROM infrastructure WHERE bibliotheque_id = $1' },
+    { key: 'communication', query: 'SELECT * FROM communication WHERE bibliotheque_id = $1' },
+    { key: 'besoins_partenariats', query: 'SELECT * FROM besoins_partenariats WHERE bibliotheque_id = $1' },
+    { key: 'images', query: 'SELECT * FROM image WHERE bibliotheque_id = $1 ORDER BY created_at', multi: true },
+  ];
+
+  const results = await Promise.all(
+    sections.map((s) => pool.query(s.query, [id]))
   );
 
-  return {
-    ...row,
-    localisation: loc.rows[0] || null,
-  };
+  const detail = { ...row };
+  sections.forEach((s, i) => {
+    detail[s.key] = s.multi ? results[i].rows : (results[i].rows[0] || null);
+  });
+
+  return detail;
 }
 
 async function list(filters) {
@@ -121,13 +133,28 @@ async function list(filters) {
 
   if (filters.q) {
     conditions.push(
-      `(b.nom_officiel ILIKE $${paramIndex} OR b.nom_alternatif ILIKE $${paramIndex})`
+      `(b.nom_officiel ILIKE $${paramIndex} OR b.nom_alternatif ILIKE $${paramIndex} OR l.quartier ILIKE $${paramIndex})`
     );
     params.push(`%${filters.q}%`);
     paramIndex++;
   }
 
+  const hasGeo = filters.lat != null && filters.lng != null;
+  if (hasGeo) {
+    conditions.push(
+      `ST_DWithin(l.geom, ST_SetSRID(ST_MakePoint($${paramIndex}, $${paramIndex + 1}), 4326)::geography, $${paramIndex + 2})`
+    );
+    params.push(filters.lng, filters.lat, filters.rayon);
+    paramIndex += 3;
+  }
+
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const distanceSelect = hasGeo
+    ? `, ST_Distance(l.geom, ST_SetSRID(ST_MakePoint($${paramIndex}, $${paramIndex + 1}), 4326)::geography) AS distance_m`
+    : '';
+  const distanceParams = hasGeo ? [filters.lng, filters.lat] : [];
+  if (hasGeo) paramIndex += 2;
+  const orderBy = hasGeo ? 'ORDER BY distance_m ASC' : 'ORDER BY b.created_at DESC';
 
   const offset = (filters.page - 1) * filters.limit;
 
@@ -141,14 +168,14 @@ async function list(filters) {
   const total = parseInt(countResult.rows[0].count, 10);
 
   const result = await pool.query(
-    `SELECT b.*, v.nom AS ville_nom, l.quartier, l.latitude, l.longitude
+    `SELECT b.*, v.nom AS ville_nom, l.quartier, l.latitude, l.longitude${distanceSelect}
      FROM bibliotheque b
      LEFT JOIN localisation l ON l.bibliotheque_id = b.id
      LEFT JOIN ville v ON v.id = l.ville_id
      ${where}
-     ORDER BY b.created_at DESC
+     ${orderBy}
      LIMIT $${paramIndex++} OFFSET $${paramIndex++}`,
-    [...params, filters.limit, offset]
+    [...params, ...distanceParams, filters.limit, offset]
   );
 
   return {
