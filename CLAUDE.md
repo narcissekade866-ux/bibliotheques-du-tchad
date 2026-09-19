@@ -78,5 +78,50 @@ cd frontend && npm install && npm run dev
 
 # Base de données (démarrer PostgreSQL si arrêté)
 sudo service postgresql start
+
+# Migrations
+cd backend && npm run migrate:up       # appliquer les migrations en attente
+cd backend && npm run migrate:down     # annuler la dernière migration
+cd backend && npm run migrate:create -- nom-de-la-migration  # créer une nouvelle migration
 ```
-*(à compléter/ajuster au fil du projet à mesure que les scripts npm réels sont créés)*
+
+## Autonomie décisionnelle
+
+Je ne suis pas développeur et je ne peux pas arbitrer entre des choix techniques
+(quelle bibliothèque, quelle structure de code, quel pattern d'implémentation).
+Tu es donc autorisé à décider seul de ces points, à condition de respecter cet
+ordre de priorité strict, dans cet ordre, en cas de choix concurrents :
+
+1. Sécurité (voir SECURITY.md — non négociable)
+2. Performance (temps de réponse, charge, scalabilité)
+3. Modernité et maintenabilité (code lisible, à jour, standards actuels)
+
+Prends la décision techniquement la plus solide selon ces critères, sans me
+demander de choisir entre des options que je ne peux pas évaluer moi-même.
+
+### Ce que tu dois valider seul (construire → vérifier → valider)
+Pour chaque tâche : implémente la solution que tu juges la meilleure selon les
+critères ci-dessus, teste-la toi-même (tests automatiques + vérification manuelle
+du comportement), corrige si nécessaire, puis considère-la validée sans attendre
+ma confirmation — sauf dans les cas listés ci-dessous.
+
+### Ce qui nécessite toujours mon accord explicite avant d'agir
+- Toute décision qui contredirait une entrée du Journal des décisions (cahier des
+  charges) : stack technique, hébergement, règle multi-villes.
+- Toute action irréversible ou destructrice : suppression de données, migration
+  de base de données qui écrase des données existantes, changement d'hébergeur.
+- Toute décision impliquant un coût récurrent nouveau ou significatif.
+- Toute déviation aux règles de SECURITY.md.
+Dans ces cas, arrête-toi, explique clairement l'enjeu et attends ma réponse.
+
+### Rapport à la fin de chaque phase
+Une fois une phase du cahier des charges terminée, envoie-moi un rapport complet
+et compréhensible pour un non-développeur, structuré ainsi :
+- Ce qui a été construit (en langage simple, pas seulement des noms de fichiers)
+- Les décisions techniques prises et pourquoi (en lien avec sécurité/performance/
+  modernité)
+- Ce qui a été vérifié et comment (tests effectués)
+- Ce que ça change concrètement pour l'utilisateur final ou pour moi
+- Ce qui reste à faire avant de passer à la phase suivante
+
+Applique cette règle dès maintenant pour la suite du projet.
