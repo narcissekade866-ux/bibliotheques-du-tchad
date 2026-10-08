@@ -125,3 +125,6 @@ et compréhensible pour un non-développeur, structuré ainsi :
 - Ce qui reste à faire avant de passer à la phase suivante
 
 Applique cette règle dès maintenant pour la suite du projet.
+
+## Formulaire de collecte
+Le formulaire Kobo (XLSForm v2) est dans docs/kobo/. Les noms de champs (colonne name) servent de reference pour import des donnees Kobo.
