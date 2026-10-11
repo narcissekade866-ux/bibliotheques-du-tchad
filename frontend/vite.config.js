@@ -64,8 +64,8 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: 'Bibliothèques du Tchad',
-        short_name: 'Biblios Tchad',
+        name: 'Bibliofinder — Cartographie des bibliothèques du Tchad',
+        short_name: 'Bibliofinder',
         description: 'Cartographie des bibliothèques du Tchad',
         start_url: '/',
         display: 'standalone',

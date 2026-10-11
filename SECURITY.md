@@ -1,5 +1,5 @@
 # SECURITY.md — Exigences de sécurité non négociables
-## Projet « Bibliothèques du Tchad »
+## Projet Bibliofinder (Cartographie des bibliothèques du Tchad)
 
 Ce document fixe les règles de sécurité que **tout code produit sur ce projet doit respecter**, sans exception ni négociation au cas par cas. Il complète `CLAUDE.md` et le cahier des charges (`docs/Cahier_des_charges_Bibliotheques_du_Tchad_v3_par_phases.md`).
 

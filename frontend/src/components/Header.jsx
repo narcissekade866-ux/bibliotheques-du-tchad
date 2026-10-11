@@ -8,7 +8,7 @@ export default function Header() {
     <header className="header">
       <div className="container header-inner">
         <Link to="/" className="header-brand">
-          Bibliothèques du Tchad
+          Bibliofinder
         </Link>
         <nav className="header-nav">
           <Link to="/" className="header-link">Carte</Link>

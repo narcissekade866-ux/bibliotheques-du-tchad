@@ -1,10 +1,10 @@
-# CLAUDE.md — Contexte du projet « Bibliothèques du Tchad »
+# CLAUDE.md — Contexte du projet Bibliofinder
 
 Ce fichier est le point d'entrée à lire en premier à chaque session. Il résume ce qu'il faut savoir pour travailler correctement sur ce projet sans avoir à tout redemander. Pour le détail complet, voir `docs/Cahier_des_charges_Bibliotheques_du_Tchad_v3_par_phases.md` et `SECURITY.md` (à lire avant toute tâche touchant l'authentification, la base de données ou les uploads).
 
 ## En une phrase
 
-Plateforme web (PWA) de cartographie des bibliothèques du Tchad : recherche, carte interactive, fiches détaillées, itinéraires — pilotée par Narcisse (Club scientifique Eureka+), développée par Claude Code agissant comme développeur senior.
+Bibliofinder — Plateforme web (PWA) de cartographie des bibliothèques du Tchad : recherche, carte interactive, fiches détaillées, itinéraires — portée par SAYBA / Eureka+, développée par Claude Code agissant comme développeur senior.
 
 ## Stack technique (décidée, non négociable sans validation explicite de Narcisse)
 

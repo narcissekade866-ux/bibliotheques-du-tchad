@@ -1,7 +1,7 @@
 {
   "name": "bibliotheques-du-tchad-backend",
   "version": "1.0.0",
-  "description": "API Node.js/Express de la plateforme Bibliothèques du Tchad",
+  "description": "API Node.js/Express de la plateforme Bibliofinder",
   "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",

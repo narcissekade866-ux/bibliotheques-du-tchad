@@ -46,8 +46,8 @@ export default function Home() {
     <main style={{ flex: 1 }}>
       <section className="hero">
         <div className="container">
-          <h1>Bibliothèques du Tchad</h1>
-          <p>Trouvez une bibliothèque près de chez vous</p>
+          <h1>Bibliofinder</h1>
+          <p>Cartographie des bibliothèques du Tchad — Trouvez une bibliothèque près de chez vous</p>
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <SearchBar onSearch={handleSearch} />
           </div>
@@ -56,6 +56,9 @@ export default function Home() {
               {bibliotheques.length} bibliothèque{bibliotheques.length !== 1 ? 's' : ''} référencée{bibliotheques.length !== 1 ? 's' : ''}
             </div>
           )}
+          <p className="hero-notice">
+            Ce répertoire est en cours de constitution : toutes les bibliothèques du Tchad ne sont pas encore recensées. De nouvelles fiches sont ajoutées régulièrement.
+          </p>
         </div>
       </section>
 

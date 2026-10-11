@@ -2,7 +2,7 @@
 Unité – Travail – Progrès
 
 # CAHIER DES CHARGES — Version 3 (structurée par phases)
-## Plateforme numérique « Bibliothèques du Tchad »
+## Plateforme numérique Bibliofinder (Cartographie des bibliothèques du Tchad)
 
 Cartographie, valorisation et facilitation de l'accès aux bibliothèques de N'Djaména et du Tchad
 
