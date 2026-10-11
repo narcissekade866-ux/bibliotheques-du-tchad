@@ -15,7 +15,8 @@ async function getById(req, res) {
 }
 
 async function list(req, res) {
-  const result = await bibliothequeService.list(req.validatedQuery);
+  const filters = { ...req.validatedQuery, _userRole: req.user?.role };
+  const result = await bibliothequeService.list(filters);
   res.json(result);
 }
 

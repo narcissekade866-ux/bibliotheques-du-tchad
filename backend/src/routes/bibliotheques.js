@@ -2,7 +2,7 @@ const express = require('express');
 const bibliothequeController = require('../controllers/bibliothequeController');
 const { validate } = require('../middlewares/validate');
 const { validateQuery } = require('../middlewares/validateQuery');
-const { authenticateToken, requireRole } = require('../middlewares/auth');
+const { authenticateToken, requireRole, optionalAuth } = require('../middlewares/auth');
 const { asyncHandler } = require('../middlewares/asyncHandler');
 const { validateUUID } = require('../middlewares/validateUUID');
 const {
@@ -14,8 +14,8 @@ const {
 
 const router = express.Router();
 
-router.get('/', validateQuery(listQuerySchema), asyncHandler(bibliothequeController.list));
-router.get('/:id', validateUUID('id'), asyncHandler(bibliothequeController.getById));
+router.get('/', optionalAuth, validateQuery(listQuerySchema), asyncHandler(bibliothequeController.list));
+router.get('/:id', optionalAuth, validateUUID('id'), asyncHandler(bibliothequeController.getById));
 
 router.post(
   '/',

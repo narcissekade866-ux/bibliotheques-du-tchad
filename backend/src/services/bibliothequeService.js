@@ -1,5 +1,28 @@
 const { pool } = require('../config/db');
 
+const PUBLIC_BIBLIO_FIELD_LIST = [
+  'id', 'nom_officiel', 'nom_alternatif', 'type', 'annee_creation',
+  'responsable_institution', 'statut_fonctionnement', 'raison_non_fonctionnel',
+  'enquete_repondant_fonction', 'statut_validation', 'kobo_uuid',
+  'created_at', 'updated_at',
+];
+
+const ADMIN_EXTRA_FIELD_LIST = [
+  'enquete_repondant_nom', 'enquete_repondant_contact', 'consentement_utilisation',
+  'cree_par_id', 'valide_par_id',
+];
+
+function biblioSelect(isAdmin, prefix = '') {
+  const fields = isAdmin
+    ? [...PUBLIC_BIBLIO_FIELD_LIST, ...ADMIN_EXTRA_FIELD_LIST]
+    : PUBLIC_BIBLIO_FIELD_LIST;
+  return fields.map(f => prefix ? `${prefix}.${f}` : f).join(', ');
+}
+
+function adminBiblioSelect(prefix = '') {
+  return biblioSelect(true, prefix);
+}
+
 async function create(data, userId) {
   const client = await pool.connect();
   try {
@@ -62,8 +85,10 @@ async function create(data, userId) {
 }
 
 async function getById(id, userRole) {
+  const isAdmin = userRole === 'administrateur';
+
   const biblio = await pool.query(
-    'SELECT * FROM bibliotheque WHERE id = $1',
+    `SELECT ${biblioSelect(isAdmin)} FROM bibliotheque WHERE id = $1`,
     [id]
   );
 
@@ -112,6 +137,7 @@ async function list(filters) {
   const conditions = [];
   const params = [];
   let paramIndex = 1;
+  const isAdmin = filters.statut_validation && filters._userRole === 'administrateur';
 
   if (filters.statut_validation) {
     conditions.push(`b.statut_validation = $${paramIndex++}`);
@@ -129,6 +155,11 @@ async function list(filters) {
   if (filters.type) {
     conditions.push(`b.type = $${paramIndex++}`);
     params.push(filters.type);
+  }
+
+  if (filters.statut_fonctionnement) {
+    conditions.push(`b.statut_fonctionnement = $${paramIndex++}`);
+    params.push(filters.statut_fonctionnement);
   }
 
   if (filters.q) {
@@ -168,7 +199,7 @@ async function list(filters) {
   const total = parseInt(countResult.rows[0].count, 10);
 
   const result = await pool.query(
-    `SELECT b.*, v.nom AS ville_nom, l.quartier, l.latitude, l.longitude${distanceSelect}
+    `SELECT ${biblioSelect(isAdmin, 'b')}, v.nom AS ville_nom, l.quartier, l.latitude, l.longitude${distanceSelect}
      FROM bibliotheque b
      LEFT JOIN localisation l ON l.bibliotheque_id = b.id
      LEFT JOIN ville v ON v.id = l.ville_id
@@ -290,4 +321,7 @@ async function validateBibliotheque(id, action, motif, adminId) {
   return { bibliotheque: result.rows[0] };
 }
 
-module.exports = { create, getById, list, update, validateBibliotheque };
+module.exports = {
+  create, getById, list, update, validateBibliotheque,
+  adminBiblioSelect, PUBLIC_BIBLIO_FIELD_LIST, ADMIN_EXTRA_FIELD_LIST,
+};

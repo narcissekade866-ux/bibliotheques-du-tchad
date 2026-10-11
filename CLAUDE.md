@@ -87,9 +87,13 @@ cd backend && npm run migrate:create -- nom-de-la-migration  # créer une nouvel
 # Tests (40 tests : auth, sécurité, API)
 cd backend && npm test
 
-# Import données KoboToolbox (JSON ou ZIP avec photos)
+# Import données KoboToolbox (JSON, ZIP avec photos, ou XLSX)
 cd backend && npm run import:kobo -- chemin/vers/export.json
 cd backend && npm run import:kobo -- chemin/vers/export.zip
+cd backend && npm run import:kobo -- chemin/vers/export.xlsx
+cd backend && npm run import:kobo -- chemin/vers/export.xlsx --dry-run
+cd backend && npm run import:kobo -- chemin/vers/export.xlsx --media chemin/vers/medias.zip
+cd backend && npm run import:kobo -- chemin/vers/export.xlsx --media chemin/vers/medias.zip --dry-run
 
 # Docker (déploiement production)
 docker compose up -d --build

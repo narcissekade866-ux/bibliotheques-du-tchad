@@ -1,5 +1,5 @@
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -9,6 +9,34 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
+
+const STATUT_COLORS = {
+  fonctionnel: '#2d7d46',
+  partiellement_fonctionnel: '#e67e22',
+  non_fonctionnel: '#c0392b',
+  temporairement_ferme: '#7f8c8d',
+};
+
+function createColorIcon(color) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="25" height="41" viewBox="0 0 25 41">
+    <path d="M12.5 0C5.6 0 0 5.6 0 12.5C0 21.9 12.5 41 12.5 41S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="${color}"/>
+    <circle cx="12.5" cy="12.5" r="5" fill="#fff"/>
+  </svg>`;
+  return L.divIcon({
+    html: svg,
+    className: '',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+  });
+}
+
+const iconCache = {};
+function getStatusIcon(statut) {
+  const color = STATUT_COLORS[statut] || STATUT_COLORS.fonctionnel;
+  if (!iconCache[color]) iconCache[color] = createColorIcon(color);
+  return iconCache[color];
+}
 
 function FitBounds({ bibliotheques }) {
   const map = useMap();
@@ -42,6 +70,7 @@ export default function MapView({ bibliotheques, center, zoom, onMarkerClick }) 
         <Marker
           key={b.id}
           position={[parseFloat(b.latitude), parseFloat(b.longitude)]}
+          icon={getStatusIcon(b.statut_fonctionnement)}
           eventHandlers={{
             click: () => onMarkerClick?.(b),
           }}

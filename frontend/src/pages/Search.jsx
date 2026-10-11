@@ -16,6 +16,7 @@ export default function Search() {
 
   const q = searchParams.get('q') || '';
   const type = searchParams.get('type') || '';
+  const statut = searchParams.get('statut') || '';
   const page = parseInt(searchParams.get('page') || '1', 10);
 
   useEffect(() => {
@@ -34,6 +35,7 @@ export default function Search() {
         const params = new URLSearchParams();
         if (q) params.set('q', q);
         if (type) params.set('type', type);
+        if (statut) params.set('statut_fonctionnement', statut);
         params.set('page', page);
         params.set('limit', '20');
         if (userPos) {
@@ -51,17 +53,26 @@ export default function Search() {
       }
     }
     search();
-  }, [q, type, page, userPos]);
+  }, [q, type, statut, page, userPos]);
+
+  function buildParams(overrides) {
+    const params = {};
+    if (q) params.q = q;
+    if (type) params.type = type;
+    if (statut) params.statut = statut;
+    return { ...params, ...overrides };
+  }
 
   function handleSearch(newQ) {
-    setSearchParams({ q: newQ, ...(type && { type }) });
+    setSearchParams(buildParams({ q: newQ || undefined }));
   }
 
   function handleTypeChange(e) {
-    const params = {};
-    if (q) params.q = q;
-    if (e.target.value) params.type = e.target.value;
-    setSearchParams(params);
+    setSearchParams(buildParams({ type: e.target.value || undefined }));
+  }
+
+  function handleStatutChange(e) {
+    setSearchParams(buildParams({ statut: e.target.value || undefined }));
   }
 
   return (
@@ -77,6 +88,13 @@ export default function Search() {
           <option value="communautaire">Communautaire</option>
           <option value="privee">Privée</option>
           <option value="associative">Associative</option>
+        </select>
+        <select value={statut} onChange={handleStatutChange} style={{ minWidth: '150px', width: 'auto' }}>
+          <option value="">Tous les statuts</option>
+          <option value="fonctionnel">En fonctionnement</option>
+          <option value="partiellement_fonctionnel">Partiellement fonctionnel</option>
+          <option value="non_fonctionnel">Non fonctionnel</option>
+          <option value="temporairement_ferme">Temporairement fermé</option>
         </select>
         <div className="toggle-group">
           <button className={`toggle-btn ${view === 'list' ? 'toggle-active' : ''}`}

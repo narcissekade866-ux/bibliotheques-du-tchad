@@ -139,7 +139,12 @@ export default function BiblioDetail() {
         <Section title="Identification">
           <Field label="Année de création" value={biblio.annee_creation} />
           <Field label="Responsable" value={biblio.responsable_institution} />
-          <Field label="Statut" value={biblio.statut_fonctionnement === 'fonctionnel' ? 'En fonctionnement' : biblio.statut_fonctionnement} />
+          <Field label="Statut" value={{
+            fonctionnel: 'En fonctionnement',
+            non_fonctionnel: 'Non fonctionnel',
+            partiellement_fonctionnel: 'Partiellement fonctionnel',
+            temporairement_ferme: 'Temporairement fermé',
+          }[biblio.statut_fonctionnement] || biblio.statut_fonctionnement} />
           {biblio.raison_non_fonctionnel && <Field label="Raison" value={biblio.raison_non_fonctionnel} />}
         </Section>
 

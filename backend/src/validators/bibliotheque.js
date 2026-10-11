@@ -53,6 +53,9 @@ const listQuerySchema = z.object({
   statut_validation: z
     .enum(['brouillon', 'en_attente', 'valide', 'rejete'])
     .optional(),
+  statut_fonctionnement: z
+    .enum(['fonctionnel', 'non_fonctionnel', 'partiellement_fonctionnel', 'temporairement_ferme'])
+    .optional(),
   q: z.string().max(200).optional(),
   lat: z.coerce.number().min(-90).max(90).optional(),
   lng: z.coerce.number().min(-180).max(180).optional(),

@@ -44,6 +44,18 @@ function PendingFiches({ fiches, onAction }) {
               <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
                 {[f.ville_nom, f.quartier].filter(Boolean).join(' — ')}
                 {f.cree_par_nom && ` · par ${f.cree_par_nom}`}
+                {f.statut_fonctionnement && f.statut_fonctionnement !== 'fonctionnel' && (
+                  <span style={{
+                    marginLeft: '8px', fontSize: '11px', padding: '1px 6px', borderRadius: '8px',
+                    color: '#fff',
+                    background: f.statut_fonctionnement === 'partiellement_fonctionnel' ? '#e67e22'
+                      : f.statut_fonctionnement === 'non_fonctionnel' ? '#c0392b' : '#7f8c8d',
+                  }}>
+                    {f.statut_fonctionnement === 'partiellement_fonctionnel' ? 'Partiel.'
+                      : f.statut_fonctionnement === 'non_fonctionnel' ? 'Non fonct.'
+                      : 'Fermé temp.'}
+                  </span>
+                )}
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
                 Soumise le {new Date(f.created_at).toLocaleDateString('fr-FR')}

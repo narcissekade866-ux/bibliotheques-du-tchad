@@ -7,6 +7,9 @@ node_modules/
 .env
 .env.local
 
+# Données privées (exports Kobo, données personnelles)
+data-private/
+
 # Uploads (images importées)
 backend/uploads/
 

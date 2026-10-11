@@ -4,17 +4,15 @@
  * Import KoboToolbox data into the database.
  *
  * Usage:
- *   node src/scripts/import-kobo.js <path-to-kobo-export.json>
- *   node src/scripts/import-kobo.js <path-to-kobo-export.zip>
+ *   node src/scripts/import-kobo.js <path-to-kobo-export.json|zip|xlsx> [--dry-run]
  *
- * Accepts either a JSON file (array of submissions) or a KoboToolbox ZIP
- * export (JSON + media attachments). When a ZIP is provided, facade photos
- * (c3_photo_facade) are imported into backend/uploads/ and linked to the
- * bibliotheque record.
+ * Accepts JSON, ZIP (JSON + photos), or XLSX (Kobo XLSX export).
+ * XLSX support reads the XLSForm from docs/kobo/ to translate
+ * French labels back to technical field codes.
  *
- * Compatible with both XLSForm v1 (single-value fields) and v2
- * (select_multiple for a2_fonction, b3_type, b6_raison, f4_suivi_emprunts,
- * g5_registre_outil, i1_catalogue_format, k3_frequence).
+ * --dry-run: parse and validate without writing to the database.
+ *
+ * Idempotent: uses _uuid / kobo_uuid to skip already-imported submissions.
  */
 
 require('dotenv').config();
@@ -22,9 +20,15 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const AdmZip = require('adm-zip');
+const XLSX_LIB = require('xlsx');
+const sharp = require('sharp');
 const { pool } = require('../config/db');
 
 const UPLOADS_DIR = path.join(__dirname, '../../uploads');
+const XLSFORM_PATH = path.join(__dirname, '../../../docs/kobo/Cartographie_Bibliotheques_XLSForm_v2.xlsx');
+
+const IMAGE_MAX_PX = 1600;
+const IMAGE_JPEG_QUALITY = 80;
 
 const JOUR_MAP = {
   lundi: 'lundi', mardi: 'mardi', mercredi: 'mercredi',
@@ -35,10 +39,12 @@ const TYPE_MAP = {
   publique: 'publique', universitaire: 'universitaire', scolaire: 'scolaire',
   specialisee: 'specialisee', communautaire: 'communautaire', privee: 'privee',
   associative: 'associative', autre: 'autre',
+  centre_culturel: 'autre', religieuse: 'autre', institut_etranger: 'autre',
 };
 
 const FONCTIONNEL_MAP = {
-  oui: 'fonctionnel', non: 'non_fonctionnel', partiel: 'temporairement_ferme',
+  oui: 'fonctionnel', non: 'non_fonctionnel',
+  partiellement: 'partiellement_fonctionnel', partiel: 'partiellement_fonctionnel',
 };
 
 const ALLOWED_IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
@@ -46,12 +52,6 @@ const ALLOWED_IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 // --- Helpers ---
 
 function splitMultiple(val) {
-  if (!val) return null;
-  const parts = String(val).split(/\s+/).filter(Boolean);
-  return parts.length > 0 ? parts : null;
-}
-
-function splitMultipleOrSingle(val) {
   if (!val) return null;
   const parts = String(val).split(/\s+/).filter(Boolean);
   return parts.length > 0 ? parts : null;
@@ -77,6 +77,11 @@ function toBool(val) {
 function toOuiNonPartiel(val) {
   if (!val) return null;
   if (['oui', 'non', 'partiel'].includes(val)) return val;
+  if (val === 'partiellement') return 'partiel';
+  if (val === 'sous_conditions') return 'partiel';
+  if (val === 'certains_livres') return 'partiel';
+  if (val === 'certaines_seulement') return 'partiel';
+  if (val === 'peut_etre') return 'partiel';
   return null;
 }
 
@@ -128,6 +133,208 @@ function getField(row, ...keys) {
   return undefined;
 }
 
+function excelDateToISO(serial) {
+  if (typeof serial !== 'number') return serial;
+  const epoch = new Date(1899, 11, 30);
+  const d = new Date(epoch.getTime() + serial * 86400000);
+  return d.toISOString().split('T')[0];
+}
+
+// --- XLSX support ---
+
+function buildXlsFormMappings() {
+  if (!fs.existsSync(XLSFORM_PATH)) {
+    throw new Error(`XLSForm not found: ${XLSFORM_PATH}\nNeeded to translate XLSX French labels to field codes.`);
+  }
+
+  const wb = XLSX_LIB.readFile(XLSFORM_PATH);
+  const survey = XLSX_LIB.utils.sheet_to_json(wb.Sheets['survey']);
+  const choices = XLSX_LIB.utils.sheet_to_json(wb.Sheets['choices']);
+
+  const surveyFields = [];
+  for (const row of survey) {
+    const type = row.type || '';
+    if (!row.name) continue;
+    if (type === 'begin_group' || type === 'end_group' || type === 'note') continue;
+
+    const label = (row['label::French (fr)'] || row['label::french (fr)'] || row.label || '').trim();
+    let listName = null;
+    let isMultiple = false;
+    if (type.startsWith('select_one ')) {
+      listName = type.split(' ')[1];
+    } else if (type.startsWith('select_multiple ')) {
+      listName = type.split(' ')[1];
+      isMultiple = true;
+    }
+
+    surveyFields.push({ name: row.name, label, type, listName, isMultiple });
+  }
+
+  const choiceMaps = {};
+  for (const row of choices) {
+    const listName = row.list_name;
+    if (!listName) continue;
+    if (!choiceMaps[listName]) choiceMaps[listName] = {};
+    const label = (row['label::French (fr)'] || row['label::french (fr)'] || row.label || '').trim();
+    choiceMaps[listName][label] = row.name;
+  }
+
+  return { surveyFields, choiceMaps };
+}
+
+function labelsMatch(xlsxHeader, surveyLabel) {
+  if (!xlsxHeader || !surveyLabel) return false;
+  if (xlsxHeader === surveyLabel) return true;
+  const stripped = surveyLabel.replace(/\s*\([^)]*\)\s*$/, '').trim();
+  if (xlsxHeader === stripped) return true;
+  if (surveyLabel.startsWith(xlsxHeader) && xlsxHeader.length > 20) return true;
+  return false;
+}
+
+function buildColumnMapping(headers, surveyFields) {
+  const mapping = new Array(headers.length).fill(null);
+  let surveyIdx = 0;
+
+  const mainQuestionLabels = new Set();
+  for (const f of surveyFields) {
+    if (f.label) mainQuestionLabels.add(f.label);
+  }
+
+  for (let c = 0; c < headers.length; c++) {
+    const header = headers[c];
+    if (!header) continue;
+
+    if (header.startsWith('_') || header === 'meta/rootUuid') {
+      mapping[c] = { fieldName: header, listName: null, isMultiple: false };
+      continue;
+    }
+
+    if (header.endsWith('_URL') || header.endsWith('_latitude') ||
+        header.endsWith('_longitude') || header.endsWith('_altitude') ||
+        header.endsWith('_precision')) {
+      continue;
+    }
+
+    const slashIdx = header.lastIndexOf('/');
+    if (slashIdx > 0) {
+      const base = header.substring(0, slashIdx);
+      if (mainQuestionLabels.has(base)) {
+        continue;
+      }
+    }
+
+    for (let s = surveyIdx; s < surveyFields.length; s++) {
+      if (labelsMatch(header, surveyFields[s].label)) {
+        mapping[c] = {
+          fieldName: surveyFields[s].name,
+          listName: surveyFields[s].listName,
+          isMultiple: surveyFields[s].isMultiple,
+        };
+        surveyIdx = s + 1;
+        break;
+      }
+    }
+  }
+
+  return mapping;
+}
+
+function translateValue(val, colMapping, choiceMaps) {
+  if (val === undefined || val === null || val === '') return undefined;
+  if (!colMapping || !colMapping.listName) return val;
+
+  const labelMap = choiceMaps[colMapping.listName];
+  if (!labelMap) return val;
+
+  const strVal = String(val);
+
+  if (colMapping.isMultiple) {
+    const labels = strVal.split(/\s{2,}|\n/).length > 1
+      ? strVal.split(/\s{2,}|\n/)
+      : strVal.split(/\s+/);
+
+    const translated = [];
+    let i = 0;
+    while (i < labels.length) {
+      const label = labels[i].trim();
+      if (!label) { i++; continue; }
+
+      let matched = false;
+      for (let len = Math.min(5, labels.length - i); len >= 1; len--) {
+        const candidate = labels.slice(i, i + len).join(' ').trim();
+        if (labelMap[candidate]) {
+          translated.push(labelMap[candidate]);
+          i += len;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        if (labelMap[label]) {
+          translated.push(labelMap[label]);
+        } else {
+          translated.push(label.toLowerCase().replace(/\s+/g, '_'));
+        }
+        i++;
+      }
+    }
+    return translated.join(' ');
+  }
+
+  if (labelMap[strVal]) return labelMap[strVal];
+  return val;
+}
+
+function loadFromXlsx(xlsxPath) {
+  console.log('Reading XLSForm for label→code mappings...');
+  const { surveyFields, choiceMaps } = buildXlsFormMappings();
+
+  console.log('Reading XLSX export...');
+  const wb = XLSX_LIB.readFile(xlsxPath);
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const range = XLSX_LIB.utils.decode_range(ws['!ref']);
+
+  const headers = [];
+  for (let c = range.s.c; c <= range.e.c; c++) {
+    const cell = ws[XLSX_LIB.utils.encode_cell({ r: 0, c })];
+    headers.push(cell ? String(cell.v) : '');
+  }
+
+  const columnMapping = buildColumnMapping(headers, surveyFields);
+
+  let mappedCount = 0;
+  for (const m of columnMapping) {
+    if (m && m.fieldName) mappedCount++;
+  }
+  console.log(`  ${headers.length} columns, ${mappedCount} mapped to fields.`);
+
+  const rows = [];
+  for (let r = 1; r <= range.e.r; r++) {
+    const row = {};
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const cell = ws[XLSX_LIB.utils.encode_cell({ r, c })];
+      const colMap = columnMapping[c];
+      if (!colMap || !colMap.fieldName) continue;
+
+      let val = cell ? cell.v : undefined;
+      if (val === undefined || val === null) continue;
+
+      if (colMap.fieldName === 'date_collecte') {
+        val = excelDateToISO(val);
+      }
+
+      val = translateValue(val, colMap, choiceMaps);
+      if (val !== undefined) {
+        row[colMap.fieldName] = val;
+      }
+    }
+    if (Object.keys(row).length > 0) rows.push(row);
+  }
+
+  console.log(`  ${rows.length} submission(s) read from XLSX.`);
+  return { jsonData: rows, mediaFiles: null, columnStats: { total: headers.length, mapped: mappedCount } };
+}
+
 // --- ZIP handling ---
 
 function loadFromZip(zipPath) {
@@ -146,6 +353,7 @@ function loadFromZip(zipPath) {
       const raw = entry.getData().toString('utf-8');
       jsonData = JSON.parse(raw);
     } else if (ALLOWED_IMAGE_EXTS.has(ext)) {
+      entry._entryPath = entry.entryName;
       mediaFiles.set(name, entry);
     }
   }
@@ -173,6 +381,15 @@ function findAttachment(row, mediaFiles) {
     }
   }
 
+  const uuid = row._uuid || '';
+  if (uuid) {
+    for (const [name, entry] of mediaFiles) {
+      if (entry._entryPath && entry._entryPath.includes(uuid)) {
+        return { name, entry };
+      }
+    }
+  }
+
   for (const [name, entry] of mediaFiles) {
     if (name.includes(photoName) || photoName.includes(name)) {
       return { name, entry };
@@ -182,24 +399,78 @@ function findAttachment(row, mediaFiles) {
   return null;
 }
 
-async function importPhoto(client, bibId, attachment) {
-  if (!attachment) return;
+function loadMediaFromZip(zipPath) {
+  const zip = new AdmZip(zipPath);
+  const entries = zip.getEntries();
+  const mediaFiles = new Map();
 
-  const ext = path.extname(attachment.name).toLowerCase() || '.jpg';
-  const newName = `${crypto.randomUUID()}${ext}`;
-  const destPath = path.join(UPLOADS_DIR, newName);
-
-  const buffer = attachment.entry.getData();
-
-  const { fileTypeFromBuffer } = await import('file-type');
-  const detected = await fileTypeFromBuffer(buffer);
-  const allowedMimes = new Set(['image/jpeg', 'image/png', 'image/webp']);
-  if (!detected || !allowedMimes.has(detected.mime)) {
-    console.warn(`    SKIP photo: invalid MIME (${detected?.mime || 'unknown'}) for ${attachment.name}`);
-    return;
+  for (const entry of entries) {
+    if (entry.isDirectory) continue;
+    const name = path.basename(entry.entryName);
+    const ext = path.extname(name).toLowerCase();
+    if (ALLOWED_IMAGE_EXTS.has(ext)) {
+      entry._entryPath = entry.entryName;
+      mediaFiles.set(name, entry);
+    }
   }
 
-  fs.writeFileSync(destPath, buffer);
+  return mediaFiles;
+}
+
+const ALLOWED_SHARP_FORMATS = new Set(['jpeg', 'png', 'webp']);
+
+async function processImage(buffer) {
+  let meta;
+  try {
+    meta = await sharp(buffer).metadata();
+  } catch {
+    return { error: 'invalid image (not readable by sharp)' };
+  }
+
+  if (!meta.format || !ALLOWED_SHARP_FORMATS.has(meta.format)) {
+    return { error: `invalid format (${meta.format || 'unknown'})` };
+  }
+
+  const processed = await sharp(buffer)
+    .rotate()
+    .resize(IMAGE_MAX_PX, IMAGE_MAX_PX, { fit: 'inside', withoutEnlargement: true })
+    .flatten({ background: { r: 255, g: 255, b: 255 } })
+    .jpeg({ quality: IMAGE_JPEG_QUALITY, mozjpeg: true })
+    .toBuffer({ resolveWithObject: true });
+
+  return {
+    buffer: processed.data,
+    originalSize: buffer.length,
+    processedSize: processed.data.length,
+    width: processed.info.width,
+    height: processed.info.height,
+  };
+}
+
+async function importPhoto(client, bibId, attachment, dryRun) {
+  if (!attachment) return null;
+
+  const buffer = attachment.entry.getData();
+  const result = await processImage(buffer);
+
+  if (result.error) {
+    console.warn(`    SKIP photo: ${result.error} for ${attachment.name}`);
+    return null;
+  }
+
+  if (dryRun) {
+    return {
+      name: attachment.name,
+      originalSize: result.originalSize,
+      processedSize: result.processedSize,
+      width: result.width,
+      height: result.height,
+    };
+  }
+
+  const newName = `${crypto.randomUUID()}.jpg`;
+  const destPath = path.join(UPLOADS_DIR, newName);
+  fs.writeFileSync(destPath, result.buffer);
 
   const url = `/uploads/${newName}`;
   await client.query(
@@ -207,7 +478,14 @@ async function importPhoto(client, bibId, attachment) {
     [bibId, url]
   );
 
-  return url;
+  return {
+    url,
+    name: attachment.name,
+    originalSize: result.originalSize,
+    processedSize: result.processedSize,
+    width: result.width,
+    height: result.height,
+  };
 }
 
 // --- DB resolvers ---
@@ -255,12 +533,50 @@ async function resolveSubdivision(client, villeId, arrondissement, autre) {
 
 // --- Main import ---
 
-async function importSubmission(client, row, mediaFiles) {
+async function importSubmission(client, row, mediaFiles, dryRun) {
+  const koboUuid = row._uuid || null;
   const biblioId = getField(row, 'bibliotheque_id');
   const nomOfficiel = getField(row, 'b1_nom_officiel');
+
   if (!nomOfficiel) {
     console.warn(`  SKIP: missing nom_officiel (bibliotheque_id: ${biblioId})`);
-    return null;
+    return { status: 'skipped', reason: 'missing_nom' };
+  }
+
+  if (koboUuid) {
+    const existing = await client.query(
+      'SELECT id FROM bibliotheque WHERE kobo_uuid = $1', [koboUuid]
+    );
+    if (existing.rows.length > 0) {
+      const existingId = existing.rows[0].id;
+      if (mediaFiles) {
+        const hasPhoto = await client.query(
+          'SELECT id FROM image WHERE bibliotheque_id = $1 LIMIT 1', [existingId]
+        );
+        if (hasPhoto.rows.length === 0) {
+          const attachment = findAttachment(row, mediaFiles);
+          if (attachment) {
+            const photoResult = await importPhoto(client, existingId, attachment, dryRun);
+            if (photoResult) {
+              return { status: 'photo_added', id: existingId, photo: photoResult };
+            }
+          }
+        }
+      }
+      return { status: 'existing', id: existingId };
+    }
+  }
+
+  if (dryRun) {
+    let photoInfo = null;
+    if (mediaFiles) {
+      const attachment = findAttachment(row, mediaFiles);
+      if (attachment) {
+        photoInfo = await importPhoto(null, null, attachment, true);
+      }
+    }
+    const gps = parseGeopoint(getField(row, 'c3_gps'));
+    return { status: 'dry_run', nom: nomOfficiel, photo: photoInfo, gps };
   }
 
   // B3 type: select_multiple in v2, take first valid enum value
@@ -296,8 +612,8 @@ async function importSubmission(client, row, mediaFiles) {
       nom_officiel, nom_alternatif, type, annee_creation,
       responsable_institution, statut_fonctionnement, raison_non_fonctionnel,
       statut_validation, enquete_repondant_nom, enquete_repondant_fonction,
-      enquete_repondant_contact, consentement_utilisation
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,'en_attente',$8,$9,$10,$11)
+      enquete_repondant_contact, consentement_utilisation, kobo_uuid
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,'en_attente',$8,$9,$10,$11,$12)
     RETURNING id`,
     [
       nomOfficiel,
@@ -311,6 +627,7 @@ async function importSubmission(client, row, mediaFiles) {
       fonctionAll ? fonctionAll.join(', ') : null,
       getField(row, 'a3_telephone') || null,
       toBool(getField(row, 'a5_autorisation')),
+      koboUuid,
     ]
   );
 
@@ -338,11 +655,12 @@ async function importSubmission(client, row, mediaFiles) {
   );
 
   // --- Photo de façade ---
+  let photoResult = null;
   if (mediaFiles) {
     const attachment = findAttachment(row, mediaFiles);
     if (attachment) {
-      const photoUrl = await importPhoto(client, bibId, attachment);
-      if (photoUrl) console.log(`    Photo: ${attachment.name} → ${photoUrl}`);
+      photoResult = await importPhoto(client, bibId, attachment, false);
+      if (photoResult) console.log(`    Photo: ${attachment.name} → ${photoResult.url} (${(photoResult.originalSize / 1024).toFixed(0)} KB → ${(photoResult.processedSize / 1024).toFixed(0)} KB)`);
     }
   }
 
@@ -426,18 +744,15 @@ async function importSubmission(client, row, mediaFiles) {
   );
 
   // --- Collection et catalogue ---
-  // H3 methode_classement + h3_methode_autre
   const classementValues = splitMultiple(getField(row, 'h3_methode_classement'));
   const classementAutre = getField(row, 'h3_methode_autre');
   const classementAll = appendAutre(classementValues, classementAutre);
 
-  // H5 domaine_principal: resolve "autre" with h5_domaine_autre
   const domainePrincipal = resolveAutre(
     getField(row, 'h5_domaine_principal'),
     getField(row, 'h5_domaine_autre')
   );
 
-  // I1 catalogue_format: select_multiple in v2 ("les_deux" removed)
   const catalogueFormat = splitMultiple(getField(row, 'i1_catalogue_format'));
 
   await client.query(
@@ -479,10 +794,7 @@ async function importSubmission(client, row, mediaFiles) {
   // --- Activités ---
   const organise = toBool(getField(row, 'k1_organise_activites'));
   if (organise) {
-    // K3 frequence: select_multiple in v2
     const frequenceValues = splitMultiple(getField(row, 'k3_frequence'));
-
-    // K4 public + k4_public_autre
     const publicValues = splitMultiple(getField(row, 'k4_public'));
     const publicAutre = getField(row, 'k4_public_autre');
     const publicAll = appendAutre(publicValues, publicAutre);
@@ -530,7 +842,6 @@ async function importSubmission(client, row, mediaFiles) {
     getField(row, 'o1_defi_3'),
   ].filter(Boolean).join('; ') || null;
 
-  // O3 appui_prioritaire: resolve "autre" with o3_appui_autre
   const appuiPrioritaire = resolveAutre(
     getField(row, 'o3_appui_prioritaire'),
     getField(row, 'o3_appui_autre')
@@ -549,9 +860,6 @@ async function importSubmission(client, row, mediaFiles) {
   );
 
   // --- Enquête ---
-  const modeCollecte = getField(row, 'mode_collecte');
-  const modeCollecteAutre = getField(row, 'mode_collecte_autre');
-
   await client.query(
     `INSERT INTO enquete (bibliotheque_id, nom_enqueteur, date_collecte, mode_collecte)
      VALUES ($1,$2,$3,'import_kobo')`,
@@ -560,15 +868,50 @@ async function importSubmission(client, row, mediaFiles) {
      getField(row, 'date_collecte') || null]
   );
 
-  return bibId;
+  return { status: 'imported', id: bibId };
 }
 
 // --- Main ---
 
+function validateGps(lat, lng) {
+  const warnings = [];
+  if (lat === null || lng === null) {
+    warnings.push('GPS manquant');
+    return warnings;
+  }
+  if (lat === 0 && lng === 0) warnings.push('GPS à 0,0 (invalide)');
+  if (lat < 7 || lat > 24) warnings.push(`latitude ${lat} hors Tchad (7-24)`);
+  if (lng < 13 || lng > 24) warnings.push(`longitude ${lng} hors Tchad (13-24)`);
+  return warnings;
+}
+
+function checkEmptyFields(row) {
+  const missing = [];
+  const checks = [
+    ['b1_nom_officiel', 'nom_officiel'],
+    ['b3_type', 'type'],
+    ['b6_fonctionnelle', 'statut_fonctionnement'],
+    ['c3_gps', 'GPS'],
+    ['c1_quartier', 'quartier'],
+    ['ville', 'ville'],
+    ['d1_jours_ouverture', 'horaires'],
+    ['a1_nom_repondant', 'répondant'],
+  ];
+  for (const [field, label] of checks) {
+    if (!getField(row, field)) missing.push(label);
+  }
+  return missing;
+}
+
 async function main() {
-  const filePath = process.argv[2];
+  const args = process.argv.slice(2);
+  const dryRun = args.includes('--dry-run');
+  const mediaIdx = args.indexOf('--media');
+  const mediaPath = mediaIdx >= 0 ? args[mediaIdx + 1] : null;
+  const filePath = args.find(a => !a.startsWith('--') && a !== mediaPath);
+
   if (!filePath) {
-    console.error('Usage: node src/scripts/import-kobo.js <path-to-kobo-export.json|zip>');
+    console.error('Usage: node src/scripts/import-kobo.js <path-to-export.json|zip|xlsx> [--dry-run] [--media <media.zip>]');
     process.exit(1);
   }
 
@@ -578,11 +921,17 @@ async function main() {
     process.exit(1);
   }
 
+  if (dryRun) console.log('*** DRY RUN — no data will be written ***\n');
+
   const ext = path.extname(absolutePath).toLowerCase();
   let submissions;
   let mediaFiles = null;
 
-  if (ext === '.zip') {
+  if (ext === '.xlsx') {
+    const result = loadFromXlsx(absolutePath);
+    submissions = result.jsonData;
+    mediaFiles = result.mediaFiles;
+  } else if (ext === '.zip') {
     console.log('Extracting ZIP archive...');
     const result = loadFromZip(absolutePath);
     const parsed = result.jsonData;
@@ -601,14 +950,30 @@ async function main() {
     console.log(`Found ${submissions.length} submission(s) to import.`);
   }
 
+  if (mediaPath) {
+    const absMedia = path.resolve(mediaPath);
+    if (!fs.existsSync(absMedia)) {
+      console.error(`Media file not found: ${absMedia}`);
+      process.exit(1);
+    }
+    console.log(`Loading media from ${path.basename(absMedia)}...`);
+    mediaFiles = loadMediaFromZip(absMedia);
+    console.log(`  ${mediaFiles.size} media file(s) found.`);
+  }
+
   if (!fs.existsSync(UPLOADS_DIR)) {
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
   }
 
   const client = await pool.connect();
   let imported = 0;
+  let existing = 0;
   let skipped = 0;
-  let photos = 0;
+  let photosAdded = 0;
+  let personalDataSuppressed = 0;
+  const photoDetails = [];
+  const gpsWarnings = [];
+  const emptyFieldReport = [];
 
   try {
     await client.query('BEGIN');
@@ -618,13 +983,47 @@ async function main() {
       const sp = `sp_${i}`;
       try {
         await client.query(`SAVEPOINT ${sp}`);
-        const bibId = await importSubmission(client, submission, mediaFiles);
-        if (bibId) {
+
+        const autorisationVal = getField(submission, 'a5_autorisation');
+        if (autorisationVal !== 'oui' && autorisationVal !== true) {
+          personalDataSuppressed++;
+        }
+
+        const nom = getField(submission, 'b1_nom_officiel') || '(sans nom)';
+
+        if (dryRun) {
+          const gps = parseGeopoint(getField(submission, 'c3_gps'));
+          const gpsIssues = validateGps(gps.lat, gps.lng);
+          if (gpsIssues.length > 0) gpsWarnings.push({ nom, issues: gpsIssues, precision: gps.precision });
+
+          const missing = checkEmptyFields(submission);
+          if (missing.length > 0) emptyFieldReport.push({ nom, missing });
+        }
+
+        const result = await importSubmission(client, submission, mediaFiles, dryRun);
+        if (!result) {
+          skipped++;
+          await client.query(`ROLLBACK TO SAVEPOINT ${sp}`);
+        } else if (result.status === 'imported' || result.status === 'dry_run') {
           imported++;
-          const nom = getField(submission, 'b1_nom_officiel');
-          console.log(`  OK: ${nom} → ${bibId}`);
+          console.log(`  ${dryRun ? 'WOULD IMPORT' : 'OK'}: ${nom}${result.id ? ` → ${result.id}` : ''}`);
+          if (result.photo) {
+            photoDetails.push({ nom, ...result.photo });
+          } else if (mediaFiles) {
+            const photoField = getField(submission, 'c3_photo_facade');
+            photoDetails.push({ nom, name: photoField ? path.basename(String(photoField)) : null, missing: !photoField, unmatched: !!photoField });
+          }
           await client.query(`RELEASE SAVEPOINT ${sp}`);
-        } else {
+        } else if (result.status === 'photo_added') {
+          photosAdded++;
+          console.log(`  PHOTO ADDED: ${nom} (id: ${result.id})`);
+          if (result.photo) photoDetails.push({ nom, ...result.photo });
+          await client.query(`RELEASE SAVEPOINT ${sp}`);
+        } else if (result.status === 'existing') {
+          existing++;
+          console.log(`  ALREADY EXISTS: ${nom} (id: ${result.id})`);
+          await client.query(`ROLLBACK TO SAVEPOINT ${sp}`);
+        } else if (result.status === 'skipped') {
           skipped++;
           await client.query(`ROLLBACK TO SAVEPOINT ${sp}`);
         }
@@ -636,9 +1035,63 @@ async function main() {
       }
     }
 
-    await client.query('COMMIT');
-    console.log(`\nImport complete: ${imported} imported, ${skipped} skipped.`);
-    console.log('All imported fiches have statut_validation = "en_attente" — validate them via the admin dashboard.');
+    if (dryRun) {
+      await client.query('ROLLBACK');
+      console.log('\n*** DRY RUN complete — nothing was written ***');
+    } else {
+      await client.query('COMMIT');
+    }
+
+    console.log(`\n═══ REPORT ═══`);
+    console.log(`  ${dryRun ? 'Would import' : 'Imported'}: ${imported}`);
+    console.log(`  Already in DB: ${existing}`);
+    if (photosAdded > 0) console.log(`  Photos added to existing fiches: ${photosAdded}`);
+    console.log(`  Skipped/errors: ${skipped}`);
+    console.log(`  Personal data not stored (A5 ≠ Oui): ${personalDataSuppressed} fiche(s)`);
+
+    if (photoDetails.length > 0) {
+      const withPhoto = photoDetails.filter(p => p.originalSize);
+      const withoutPhoto = photoDetails.filter(p => p.missing);
+      const unmatched = photoDetails.filter(p => p.unmatched);
+
+      console.log(`\n═══ PHOTOS ═══`);
+      console.log(`  Avec photo : ${withPhoto.length}`);
+      console.log(`  Sans champ photo : ${withoutPhoto.length}`);
+      if (unmatched.length > 0) console.log(`  Champ photo mais fichier non trouvé : ${unmatched.length}`);
+
+      if (withPhoto.length > 0) {
+        let totalOriginal = 0;
+        let totalProcessed = 0;
+        console.log('');
+        for (const p of withPhoto) {
+          const origKB = (p.originalSize / 1024).toFixed(0);
+          const procKB = (p.processedSize / 1024).toFixed(0);
+          totalOriginal += p.originalSize;
+          totalProcessed += p.processedSize;
+          console.log(`  ${p.nom}`);
+          console.log(`    ${p.name}: ${origKB} KB → ${procKB} KB (${p.width}×${p.height})`);
+        }
+        console.log(`\n  Total: ${(totalOriginal / 1024 / 1024).toFixed(2)} MB → ${(totalProcessed / 1024 / 1024).toFixed(2)} MB`);
+      }
+    }
+
+    if (gpsWarnings.length > 0) {
+      console.log(`\n═══ GPS WARNINGS ═══`);
+      for (const w of gpsWarnings) {
+        console.log(`  ${w.nom}: ${w.issues.join(', ')}${w.precision != null ? ` (précision: ${w.precision} m)` : ''}`);
+      }
+    }
+
+    if (emptyFieldReport.length > 0) {
+      console.log(`\n═══ CHAMPS IMPORTANTS VIDES ═══`);
+      for (const r of emptyFieldReport) {
+        console.log(`  ${r.nom}: ${r.missing.join(', ')}`);
+      }
+    }
+
+    if (!dryRun && imported > 0) {
+      console.log('\nAll imported fiches have statut_validation = "en_attente" — validate them via the admin dashboard.');
+    }
   } catch (err) {
     await client.query('ROLLBACK');
     console.error(`Import failed, all changes rolled back: ${err.message}`);
@@ -649,4 +1102,8 @@ async function main() {
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = { importSubmission, getField, buildXlsFormMappings, loadFromXlsx, processImage, loadMediaFromZip };

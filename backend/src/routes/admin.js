@@ -3,6 +3,7 @@ const { authenticateToken, requireRole } = require('../middlewares/auth');
 const { asyncHandler } = require('../middlewares/asyncHandler');
 const { validateUUID } = require('../middlewares/validateUUID');
 const { pool } = require('../config/db');
+const { adminBiblioSelect } = require('../services/bibliothequeService');
 
 const router = express.Router();
 
@@ -32,7 +33,7 @@ router.get('/stats', asyncHandler(async (req, res) => {
 
 router.get('/fiches-en-attente', asyncHandler(async (req, res) => {
   const result = await pool.query(
-    `SELECT b.*, v.nom AS ville_nom, l.quartier, u.nom AS cree_par_nom
+    `SELECT ${adminBiblioSelect('b')}, v.nom AS ville_nom, l.quartier, u.nom AS cree_par_nom
      FROM bibliotheque b
      LEFT JOIN localisation l ON l.bibliotheque_id = b.id
      LEFT JOIN ville v ON v.id = l.ville_id
