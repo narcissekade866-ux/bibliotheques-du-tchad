@@ -31,10 +31,10 @@ Ce cahier des charges est réorganisé **par phase de développement** plutôt q
 | --- | --- | --- |
 | 0 — Environnement & outillage | Poste de développement, Git/GitHub, Node.js, PostgreSQL/PostGIS, Claude Code | Terminé |
 | 1 — Analyse et cadrage | Contexte, objectifs, gouvernance, acteurs, scénarios utilisateurs | Validé |
-| 2 — Conception | Spécifications fonctionnelles, modèle de données, cartographie, architecture technique, UI/UX, outil de collecte numérique | En cours |
-| 3 — Développement | Sprints de développement (back-end, front-end, PWA) | À venir |
-| 4 — Tests | Tests fonctionnels, performance, sécurité, recette utilisateur | À venir |
-| 5 — Déploiement et maintenance | Mise en production, formation, plan de maintenance | À venir |
+| 2 — Conception | Spécifications fonctionnelles, modèle de données, cartographie, architecture technique, UI/UX, outil de collecte numérique | Terminé |
+| 3 — Développement | Sprints de développement (back-end, front-end, PWA) | Terminé |
+| 4 — Tests | Tests fonctionnels, performance, sécurité, recette utilisateur | Terminé |
+| 5 — Déploiement et maintenance | Mise en production, formation, plan de maintenance | En cours |
 
 ---
 

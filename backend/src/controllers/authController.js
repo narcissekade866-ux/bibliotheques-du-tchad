@@ -5,7 +5,11 @@ async function register(req, res) {
   if (result.error) {
     return res.status(result.status).json({ message: result.error });
   }
-  res.status(201).json({ user: result.user });
+  res.status(201).json({
+    access_token: result.accessToken,
+    refresh_token: result.refreshToken,
+    user: result.user,
+  });
 }
 
 async function login(req, res) {
@@ -41,7 +45,11 @@ async function logout(req, res) {
 }
 
 async function me(req, res) {
-  res.json({ user: req.user });
+  const user = await authService.getProfile(req.user.id);
+  if (!user) {
+    return res.status(404).json({ message: 'Utilisateur introuvable' });
+  }
+  res.json(user);
 }
 
 module.exports = { register, login, refresh, logout, me };

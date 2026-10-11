@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { apiGet } from '../services/api';
 import SearchBar from '../components/SearchBar';
 import MapView from '../components/MapView';
@@ -66,10 +65,10 @@ export default function Search() {
   }
 
   return (
-    <main className="container" style={{ padding: '24px 16px' }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginBottom: '20px' }}>
+    <main className="container" style={{ padding: '28px 16px', flex: 1 }}>
+      <div className="search-controls">
         <SearchBar onSearch={handleSearch} initialQuery={q} />
-        <select value={type} onChange={handleTypeChange} style={{ minWidth: '150px' }}>
+        <select value={type} onChange={handleTypeChange} style={{ minWidth: '150px', width: 'auto' }}>
           <option value="">Tous les types</option>
           <option value="publique">Publique</option>
           <option value="universitaire">Universitaire</option>
@@ -79,46 +78,37 @@ export default function Search() {
           <option value="privee">Privée</option>
           <option value="associative">Associative</option>
         </select>
-        <div style={{ display: 'flex', gap: '4px' }}>
-          <button
-            onClick={() => setView('list')}
-            className={`btn ${view === 'list' ? 'btn-primary' : ''}`}
-            style={view !== 'list' ? { background: 'var(--bg-alt)', border: '1px solid var(--border)' } : {}}
-          >
-            Liste
-          </button>
-          <button
-            onClick={() => setView('map')}
-            className={`btn ${view === 'map' ? 'btn-primary' : ''}`}
-            style={view !== 'map' ? { background: 'var(--bg-alt)', border: '1px solid var(--border)' } : {}}
-          >
-            Carte
-          </button>
+        <div className="toggle-group">
+          <button className={`toggle-btn ${view === 'list' ? 'toggle-active' : ''}`}
+            onClick={() => setView('list')}>Liste</button>
+          <button className={`toggle-btn ${view === 'map' ? 'toggle-active' : ''}`}
+            onClick={() => setView('map')}>Carte</button>
         </div>
       </div>
 
-      {loading && <p>Chargement...</p>}
-
-      {!loading && bibliotheques.length === 0 && (
-        <p style={{ textAlign: 'center', padding: '40px', color: 'var(--text-light)' }}>
-          Aucune bibliothèque trouvée.{q && ' Essayez avec d\'autres termes de recherche.'}
-        </p>
+      {loading && (
+        <div className="grid grid-cards">
+          {[1,2,3,4,5,6].map(i => <div key={i} className="skeleton skeleton-card" />)}
+        </div>
       )}
 
-      {!loading && view === 'list' && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '12px',
-        }}>
+      {!loading && bibliotheques.length === 0 && (
+        <div className="empty-state">
+          <p>Aucune bibliothèque trouvée.</p>
+          {q && <p>Essayez avec d'autres termes de recherche.</p>}
+        </div>
+      )}
+
+      {!loading && view === 'list' && bibliotheques.length > 0 && (
+        <div className="grid grid-cards">
           {bibliotheques.map((b) => (
             <BiblioCard key={b.id} biblio={b} />
           ))}
         </div>
       )}
 
-      {!loading && view === 'map' && (
-        <div style={{ height: '60vh', minHeight: '400px', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+      {!loading && view === 'map' && bibliotheques.length > 0 && (
+        <div className="map-container" style={{ height: '60vh', minHeight: '400px' }}>
           <MapView
             bibliotheques={bibliotheques}
             onMarkerClick={(b) => navigate(`/bibliotheque/${b.id}`)}
@@ -127,25 +117,19 @@ export default function Search() {
       )}
 
       {pagination && pagination.pages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '20px' }}>
+        <div className="pagination">
           {page > 1 && (
-            <button
-              className="btn"
-              style={{ background: 'var(--bg-alt)', border: '1px solid var(--border)' }}
-              onClick={() => setSearchParams({ q, ...(type && { type }), page: page - 1 })}
-            >
+            <button className="btn btn-secondary btn-sm"
+              onClick={() => setSearchParams({ q, ...(type && { type }), page: page - 1 })}>
               Précédent
             </button>
           )}
-          <span style={{ padding: '8px', fontSize: '14px' }}>
+          <span className="pagination-info">
             Page {page} / {pagination.pages}
           </span>
           {page < pagination.pages && (
-            <button
-              className="btn"
-              style={{ background: 'var(--bg-alt)', border: '1px solid var(--border)' }}
-              onClick={() => setSearchParams({ q, ...(type && { type }), page: page + 1 })}
-            >
+            <button className="btn btn-secondary btn-sm"
+              onClick={() => setSearchParams({ q, ...(type && { type }), page: page + 1 })}>
               Suivant
             </button>
           )}

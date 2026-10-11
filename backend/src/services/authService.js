@@ -21,6 +21,15 @@ function generateRefreshToken() {
   return crypto.randomBytes(48).toString('hex');
 }
 
+async function storeRefreshToken(userId, rawToken) {
+  const hash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+  await pool.query(
+    'INSERT INTO refresh_token (utilisateur_id, token_hash, expires_at) VALUES ($1, $2, $3)',
+    [userId, hash, expiresAt]
+  );
+}
+
 async function register({ nom, email, telephone, mot_de_passe }) {
   const existing = await pool.query(
     'SELECT id FROM utilisateur WHERE email = $1',
@@ -39,7 +48,12 @@ async function register({ nom, email, telephone, mot_de_passe }) {
     [nom, email, telephone || null, hash]
   );
 
-  return { user: result.rows[0] };
+  const user = result.rows[0];
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken();
+  await storeRefreshToken(user.id, refreshToken);
+
+  return { accessToken, refreshToken, user };
 }
 
 async function login({ email, mot_de_passe }) {
@@ -92,20 +106,7 @@ async function login({ email, mot_de_passe }) {
 
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken();
-
-  const refreshHash = crypto
-    .createHash('sha256')
-    .update(refreshToken)
-    .digest('hex');
-  const expiresAt = new Date(
-    Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000
-  );
-
-  await pool.query(
-    `INSERT INTO refresh_token (utilisateur_id, token_hash, expires_at)
-     VALUES ($1, $2, $3)`,
-    [user.id, refreshHash, expiresAt]
-  );
+  await storeRefreshToken(user.id, refreshToken);
 
   return {
     accessToken,
@@ -147,20 +148,7 @@ async function refresh(rawToken) {
 
   const accessToken = generateAccessToken(row);
   const newRefreshToken = generateRefreshToken();
-
-  const newHash = crypto
-    .createHash('sha256')
-    .update(newRefreshToken)
-    .digest('hex');
-  const expiresAt = new Date(
-    Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000
-  );
-
-  await pool.query(
-    `INSERT INTO refresh_token (utilisateur_id, token_hash, expires_at)
-     VALUES ($1, $2, $3)`,
-    [row.utilisateur_id, newHash, expiresAt]
-  );
+  await storeRefreshToken(row.utilisateur_id, newRefreshToken);
 
   return {
     accessToken,
@@ -179,8 +167,16 @@ async function logout(rawToken) {
   ]);
 }
 
+async function getProfile(userId) {
+  const result = await pool.query(
+    'SELECT id, nom, email, role, statut, created_at FROM utilisateur WHERE id = $1',
+    [userId]
+  );
+  return result.rows[0] || null;
+}
+
 async function fakeHashDelay() {
   await bcrypt.hash('fake', BCRYPT_ROUNDS);
 }
 
-module.exports = { register, login, refresh, logout };
+module.exports = { register, login, refresh, logout, getProfile };

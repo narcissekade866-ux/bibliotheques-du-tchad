@@ -1,27 +1,27 @@
 import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Header() {
+  const { user, isAdmin, logout } = useAuth();
+
   return (
-    <header style={{
-      background: 'var(--primary)',
-      color: '#fff',
-      padding: '12px 0',
-      position: 'sticky',
-      top: 0,
-      zIndex: 1000,
-    }}>
-      <div className="container" style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '16px',
-      }}>
-        <Link to="/" style={{ color: '#fff', textDecoration: 'none', fontWeight: 600, fontSize: '18px' }}>
+    <header className="header">
+      <div className="container header-inner">
+        <Link to="/" className="header-brand">
           Bibliothèques du Tchad
         </Link>
-        <nav style={{ display: 'flex', gap: '16px' }}>
-          <Link to="/" style={{ color: '#fff', textDecoration: 'none' }}>Carte</Link>
-          <Link to="/recherche" style={{ color: '#fff', textDecoration: 'none' }}>Recherche</Link>
+        <nav className="header-nav">
+          <Link to="/" className="header-link">Carte</Link>
+          <Link to="/recherche" className="header-link">Recherche</Link>
+          <Link to="/statistiques" className="header-link">Stats</Link>
+          {isAdmin && (
+            <Link to="/admin" className="header-link header-link-accent">Admin</Link>
+          )}
+          {user ? (
+            <button onClick={logout} className="header-btn">Déconnexion</button>
+          ) : (
+            <Link to="/connexion" className="header-btn">Connexion</Link>
+          )}
         </nav>
       </div>
     </header>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { apiGet } from '../services/api';
 import MapView from '../components/MapView';
+import AvisSection from '../components/AvisSection';
 
 const JOUR_LABELS = {
   lundi: 'Lundi', mardi: 'Mardi', mercredi: 'Mercredi',
@@ -11,15 +12,10 @@ const JOUR_LABELS = {
 function Section({ title, children }) {
   if (!children) return null;
   return (
-    <section style={{
-      padding: '16px',
-      border: '1px solid var(--border)',
-      borderRadius: 'var(--radius)',
-      background: 'var(--bg)',
-    }}>
-      <h3 style={{ margin: '0 0 12px', fontSize: '16px', color: 'var(--primary)' }}>{title}</h3>
+    <div className="section-card">
+      <h3 className="section-title">{title}</h3>
       {children}
-    </section>
+    </div>
   );
 }
 
@@ -27,8 +23,8 @@ function Field({ label, value }) {
   if (value == null || value === '' || (Array.isArray(value) && value.length === 0)) return null;
   const display = Array.isArray(value) ? value.join(', ') : String(value);
   return (
-    <div style={{ marginBottom: '8px' }}>
-      <span style={{ fontSize: '13px', color: 'var(--text-light)' }}>{label}</span>
+    <div className="field-value">
+      <div className="field-label">{label}</div>
       <div>{display}</div>
     </div>
   );
@@ -38,6 +34,19 @@ function OuiNonField({ label, value }) {
   if (!value) return null;
   const display = { oui: 'Oui', non: 'Non', partiel: 'Partiel', parfois: 'Parfois' };
   return <Field label={label} value={display[value] || value} />;
+}
+
+function DetailSkeleton() {
+  return (
+    <main className="container" style={{ padding: '28px 16px', flex: 1 }}>
+      <div className="skeleton skeleton-text" style={{ width: '80px', marginBottom: '20px' }} />
+      <div className="skeleton skeleton-title" style={{ width: '60%' }} />
+      <div className="skeleton" style={{ height: '250px', marginBottom: '20px' }} />
+      <div className="grid grid-detail">
+        {[1,2,3].map(i => <div key={i} className="skeleton skeleton-card" />)}
+      </div>
+    </main>
+  );
 }
 
 export default function BiblioDetail() {
@@ -60,9 +69,19 @@ export default function BiblioDetail() {
     load();
   }, [id]);
 
-  if (loading) return <main className="container" style={{ padding: '24px 16px' }}><p>Chargement...</p></main>;
-  if (error) return <main className="container" style={{ padding: '24px 16px' }}><p>{error}</p></main>;
-  if (!biblio) return <main className="container" style={{ padding: '24px 16px' }}><p>Bibliothèque introuvable.</p></main>;
+  if (loading) return <DetailSkeleton />;
+
+  if (error) return (
+    <main className="container" style={{ padding: '28px 16px', flex: 1 }}>
+      <div className="alert alert-error">{error}</div>
+    </main>
+  );
+
+  if (!biblio) return (
+    <main className="container empty-state" style={{ flex: 1 }}>
+      <p>Bibliothèque introuvable.</p>
+    </main>
+  );
 
   const loc = biblio.localisation;
   const hasCoords = loc && loc.latitude && loc.longitude;
@@ -71,31 +90,26 @@ export default function BiblioDetail() {
     : null;
 
   return (
-    <main className="container" style={{ padding: '24px 16px' }}>
-      <Link to="/" style={{ fontSize: '14px' }}>&larr; Retour à la carte</Link>
+    <main className="container" style={{ padding: '28px 16px', flex: 1 }}>
+      <Link to="/" style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+        &larr; Retour à la carte
+      </Link>
 
-      <div style={{ marginTop: '16px', marginBottom: '16px' }}>
-        <h1 style={{ margin: '0 0 4px', fontSize: '24px' }}>{biblio.nom_officiel}</h1>
+      <div className="detail-header">
+        <h1 className="detail-title">{biblio.nom_officiel}</h1>
         {biblio.nom_alternatif && (
-          <div style={{ color: 'var(--text-light)', fontSize: '14px' }}>{biblio.nom_alternatif}</div>
+          <div className="detail-subtitle">{biblio.nom_alternatif}</div>
         )}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-          {biblio.type && (
-            <span style={{
-              fontSize: '12px', padding: '2px 8px', borderRadius: '12px',
-              background: 'var(--primary-light)', color: 'var(--primary)',
-            }}>
-              {biblio.type}
-            </span>
-          )}
-          <span style={{ fontSize: '12px', color: 'var(--text-light)' }}>
+        <div className="detail-meta">
+          {biblio.type && <span className="badge badge-primary">{biblio.type}</span>}
+          <span className="detail-date">
             Mis à jour le {new Date(biblio.updated_at).toLocaleDateString('fr-FR')}
           </span>
         </div>
       </div>
 
       {hasCoords && (
-        <div style={{ height: '250px', borderRadius: 'var(--radius)', overflow: 'hidden', marginBottom: '16px' }}>
+        <div className="map-container" style={{ height: '250px', marginBottom: '24px' }}>
           <MapView
             bibliotheques={[{ ...biblio, latitude: loc.latitude, longitude: loc.longitude }]}
             center={[parseFloat(loc.latitude), parseFloat(loc.longitude)]}
@@ -104,7 +118,7 @@ export default function BiblioDetail() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+      <div className="grid grid-detail">
         <Section title="Localisation">
           {loc && (
             <>
@@ -114,7 +128,7 @@ export default function BiblioDetail() {
               <Field label="Point de repère" value={loc.point_repere} />
               {mapLink && (
                 <a href={mapLink} target="_blank" rel="noopener noreferrer"
-                   className="btn btn-primary" style={{ display: 'inline-block', marginTop: '8px', fontSize: '14px', textDecoration: 'none' }}>
+                   className="btn btn-primary btn-sm" style={{ marginTop: '8px' }}>
                   Itinéraire
                 </a>
               )}
@@ -131,22 +145,24 @@ export default function BiblioDetail() {
 
         {biblio.horaires && biblio.horaires.length > 0 && (
           <Section title="Horaires">
-            <table style={{ width: '100%', fontSize: '14px', borderCollapse: 'collapse' }}>
+            <table>
               <tbody>
                 {biblio.horaires.map((h) => (
-                  <tr key={h.jour} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '4px 0', fontWeight: 500 }}>{JOUR_LABELS[h.jour]}</td>
-                    <td style={{ padding: '4px 0', textAlign: 'right' }}>
+                  <tr key={h.jour}>
+                    <td style={{ fontWeight: 500, paddingLeft: 0 }}>{JOUR_LABELS[h.jour]}</td>
+                    <td style={{ textAlign: 'right', paddingRight: 0, color: 'var(--text-secondary)' }}>
                       {h.heure_ouverture && h.heure_fermeture
-                        ? `${h.heure_ouverture.slice(0, 5)} - ${h.heure_fermeture.slice(0, 5)}`
-                        : 'Non renseigné'}
+                        ? `${h.heure_ouverture.slice(0, 5)} – ${h.heure_fermeture.slice(0, 5)}`
+                        : '—'}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
             {biblio.horaires[0]?.ouvert_vacances && (
-              <OuiNonField label="Ouvert pendant les vacances" value={biblio.horaires[0].ouvert_vacances} />
+              <div style={{ marginTop: '12px' }}>
+                <OuiNonField label="Ouvert pendant les vacances" value={biblio.horaires[0].ouvert_vacances} />
+              </div>
             )}
           </Section>
         )}
@@ -220,6 +236,10 @@ export default function BiblioDetail() {
             <Field label="Recherche de partenaires" value={biblio.besoins_partenariats.recherche_partenaires ? 'Oui' : null} />
           </Section>
         )}
+      </div>
+
+      <div style={{ marginTop: '28px' }}>
+        <AvisSection bibliothequeId={id} />
       </div>
     </main>
   );

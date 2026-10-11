@@ -3,6 +3,8 @@ const bibliothequeController = require('../controllers/bibliothequeController');
 const { validate } = require('../middlewares/validate');
 const { validateQuery } = require('../middlewares/validateQuery');
 const { authenticateToken, requireRole } = require('../middlewares/auth');
+const { asyncHandler } = require('../middlewares/asyncHandler');
+const { validateUUID } = require('../middlewares/validateUUID');
 const {
   createBibliothequeSchema,
   updateBibliothequeSchema,
@@ -12,36 +14,33 @@ const {
 
 const router = express.Router();
 
-router.get(
-  '/',
-  validateQuery(listQuerySchema),
-  bibliothequeController.list
-);
-
-router.get('/:id', bibliothequeController.getById);
+router.get('/', validateQuery(listQuerySchema), asyncHandler(bibliothequeController.list));
+router.get('/:id', validateUUID('id'), asyncHandler(bibliothequeController.getById));
 
 router.post(
   '/',
   authenticateToken,
   requireRole('administrateur', 'enqueteur', 'responsable_bibliotheque'),
   validate(createBibliothequeSchema),
-  bibliothequeController.create
+  asyncHandler(bibliothequeController.create)
 );
 
 router.put(
   '/:id',
   authenticateToken,
   requireRole('administrateur', 'enqueteur', 'responsable_bibliotheque'),
+  validateUUID('id'),
   validate(updateBibliothequeSchema),
-  bibliothequeController.update
+  asyncHandler(bibliothequeController.update)
 );
 
 router.post(
   '/:id/validation',
   authenticateToken,
   requireRole('administrateur'),
+  validateUUID('id'),
   validate(validationActionSchema),
-  bibliothequeController.validateBiblio
+  asyncHandler(bibliothequeController.validateBiblio)
 );
 
 module.exports = router;

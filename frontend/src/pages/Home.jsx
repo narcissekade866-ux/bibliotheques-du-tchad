@@ -43,30 +43,26 @@ export default function Home() {
   const zoom = ville ? ville.zoom_defaut : 13;
 
   return (
-    <main>
-      <section style={{
-        padding: '32px 16px',
-        textAlign: 'center',
-        background: 'var(--bg-alt)',
-      }}>
-        <h1 style={{ margin: '0 0 8px', fontSize: '28px' }}>
-          Bibliothèques du Tchad
-        </h1>
-        <p style={{ margin: '0 0 20px', color: 'var(--text-light)' }}>
-          Trouvez une bibliothèque près de chez vous
-        </p>
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <SearchBar onSearch={handleSearch} />
+    <main style={{ flex: 1 }}>
+      <section className="hero">
+        <div className="container">
+          <h1>Bibliothèques du Tchad</h1>
+          <p>Trouvez une bibliothèque près de chez vous</p>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <SearchBar onSearch={handleSearch} />
+          </div>
+          {!loading && (
+            <div className="hero-count">
+              {bibliotheques.length} bibliothèque{bibliotheques.length !== 1 ? 's' : ''} référencée{bibliotheques.length !== 1 ? 's' : ''}
+            </div>
+          )}
         </div>
-        {!loading && (
-          <p style={{ marginTop: '12px', fontSize: '14px', color: 'var(--text-light)' }}>
-            {bibliotheques.length} bibliothèque{bibliotheques.length !== 1 ? 's' : ''} référencée{bibliotheques.length !== 1 ? 's' : ''}
-          </p>
-        )}
       </section>
 
       <section style={{ height: '50vh', minHeight: '300px' }}>
-        {!loading && (
+        {loading ? (
+          <div className="skeleton" style={{ height: '100%' }} />
+        ) : (
           <MapView
             bibliotheques={bibliotheques}
             center={center}
@@ -77,15 +73,11 @@ export default function Home() {
       </section>
 
       {bibliotheques.length > 0 && (
-        <section className="container" style={{ padding: '24px 16px' }}>
-          <h2 style={{ fontSize: '20px', margin: '0 0 16px' }}>
+        <section className="container" style={{ padding: '32px 16px' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 20px' }}>
             Dernières bibliothèques ajoutées
           </h2>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '12px',
-          }}>
+          <div className="grid grid-cards">
             {bibliotheques.slice(0, 6).map((b) => (
               <BiblioCard key={b.id} biblio={b} />
             ))}

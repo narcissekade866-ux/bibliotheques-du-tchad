@@ -1,11 +1,17 @@
 const express = require('express');
+const path = require('node:path');
 const helmet = require('helmet');
 const cors = require('cors');
+const { errorHandler } = require('./middlewares/errorHandler');
 
 const healthRouter = require('./routes/health');
 const authRouter = require('./routes/auth');
 const bibliothequesRouter = require('./routes/bibliotheques');
 const villesRouter = require('./routes/villes');
+const imagesRouter = require('./routes/images');
+const adminRouter = require('./routes/admin');
+const avisRouter = require('./routes/avis');
+const statsRouter = require('./routes/stats');
 
 const allowedOrigins = (process.env.CORS_ORIGIN || '')
   .split(',')
@@ -17,14 +23,32 @@ const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
   })
 );
 app.use(express.json({ limit: '1mb' }));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
+  setHeaders: (res) => {
+    res.set('X-Content-Type-Options', 'nosniff');
+    res.set('Content-Disposition', 'inline');
+  },
+}));
 
 app.use('/api/health', healthRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/bibliotheques', bibliothequesRouter);
 app.use('/api/villes', villesRouter);
+app.use('/api/images', imagesRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/avis', avisRouter);
+app.use('/api/stats', statsRouter);
+
+app.use(errorHandler);
 
 module.exports = app;

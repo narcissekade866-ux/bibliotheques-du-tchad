@@ -49,9 +49,9 @@ export default function MapView({ bibliotheques, center, zoom, onMarkerClick }) 
           <Popup>
             <strong>{b.nom_officiel}</strong>
             {b.ville_nom && <div>{b.quartier ? `${b.quartier}, ` : ''}{b.ville_nom}</div>}
-            {b.type && <div style={{ fontSize: '12px', color: '#666' }}>{b.type}</div>}
+            {b.type && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{b.type}</div>}
             {b.distance_m != null && (
-              <div style={{ fontSize: '12px', marginTop: '4px' }}>
+              <div style={{ fontSize: '12px', marginTop: '4px', color: 'var(--text-muted)' }}>
                 {b.distance_m < 1000
                   ? `${Math.round(b.distance_m)} m`
                   : `${(b.distance_m / 1000).toFixed(1)} km`}

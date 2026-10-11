@@ -83,6 +83,16 @@ sudo service postgresql start
 cd backend && npm run migrate:up       # appliquer les migrations en attente
 cd backend && npm run migrate:down     # annuler la dernière migration
 cd backend && npm run migrate:create -- nom-de-la-migration  # créer une nouvelle migration
+
+# Tests (40 tests : auth, sécurité, API)
+cd backend && npm test
+
+# Import données KoboToolbox (JSON ou ZIP avec photos)
+cd backend && npm run import:kobo -- chemin/vers/export.json
+cd backend && npm run import:kobo -- chemin/vers/export.zip
+
+# Docker (déploiement production)
+docker compose up -d --build
 ```
 
 ## Autonomie décisionnelle

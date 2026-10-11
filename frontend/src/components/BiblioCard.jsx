@@ -13,40 +13,22 @@ const TYPE_LABELS = {
 
 export default function BiblioCard({ biblio }) {
   return (
-    <Link
-      to={`/bibliotheque/${biblio.id}`}
-      style={{
-        display: 'block',
-        padding: '16px',
-        border: '1px solid var(--border)',
-        borderRadius: 'var(--radius)',
-        textDecoration: 'none',
-        color: 'inherit',
-        background: 'var(--bg)',
-        boxShadow: 'var(--shadow)',
-      }}
-    >
-      <h3 style={{ margin: '0 0 4px', color: 'var(--text)', fontSize: '16px' }}>
+    <Link to={`/bibliotheque/${biblio.id}`} className="card card-interactive card-link">
+      <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 600 }}>
         {biblio.nom_officiel}
       </h3>
-      <div style={{ fontSize: '14px', color: 'var(--text-light)' }}>
+      <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
         {biblio.quartier && <span>{biblio.quartier}, </span>}
         {biblio.ville_nom && <span>{biblio.ville_nom}</span>}
       </div>
-      <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
         {biblio.type && (
-          <span style={{
-            fontSize: '12px',
-            padding: '2px 8px',
-            borderRadius: '12px',
-            background: 'var(--primary-light)',
-            color: 'var(--primary)',
-          }}>
+          <span className="badge badge-primary">
             {TYPE_LABELS[biblio.type] || biblio.type}
           </span>
         )}
         {biblio.distance_m != null && (
-          <span style={{ fontSize: '12px', color: 'var(--text-light)' }}>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
             {biblio.distance_m < 1000
               ? `${Math.round(biblio.distance_m)} m`
               : `${(biblio.distance_m / 1000).toFixed(1)} km`}
