@@ -7,61 +7,82 @@ const { pool } = require('../config/db');
 
 const BCRYPT_ROUNDS = 12;
 
-function prompt(question, hidden = false) {
+function promptVisible(question) {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    if (hidden) {
-      process.stdout.write(question);
-      const stdin = process.stdin;
-      const wasRaw = stdin.isRaw;
-      if (stdin.setRawMode) stdin.setRawMode(true);
-      let input = '';
-      const onData = (char) => {
-        const c = char.toString();
-        if (c === '\n' || c === '\r') {
-          if (stdin.setRawMode) stdin.setRawMode(wasRaw);
-          stdin.removeListener('data', onData);
-          process.stdout.write('\n');
-          rl.close();
-          resolve(input);
-        } else if (c === '\u0003') {
-          process.exit(1);
-        } else if (c === '\u007F' || c === '\b') {
-          input = input.slice(0, -1);
-        } else {
-          input += c;
-        }
-      };
-      stdin.on('data', onData);
-    } else {
-      rl.question(question, (answer) => {
-        rl.close();
-        resolve(answer.trim());
-      });
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
+}
+
+function promptHidden(question) {
+  return new Promise((resolve, reject) => {
+    process.stdout.write(question);
+
+    if (!process.stdin.isTTY) {
+      reject(new Error('Ce script doit être exécuté dans un terminal interactif.'));
+      return;
     }
+
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.setEncoding('utf8');
+
+    let input = '';
+
+    const onData = (key) => {
+      if (key === '\r' || key === '\n') {
+        process.stdin.setRawMode(false);
+        process.stdin.pause();
+        process.stdin.removeListener('data', onData);
+        process.stdout.write('\n');
+        resolve(input);
+      } else if (key === '\u0003') {
+        process.stdin.setRawMode(false);
+        process.stdout.write('\n');
+        process.exit(1);
+      } else if (key === '\u007F' || key === '\b') {
+        input = input.slice(0, -1);
+      } else if (key.charCodeAt(0) >= 32) {
+        input += key;
+      }
+    };
+
+    process.stdin.on('data', onData);
   });
 }
 
 async function main() {
   console.log('=== Création du premier administrateur Bibliofinder ===\n');
 
-  const nom = await prompt('Nom complet : ');
+  const nom = await promptVisible('Nom complet : ');
   if (!nom) { console.error('Le nom est obligatoire.'); process.exit(1); }
 
-  const email = await prompt('Email : ');
+  const email = await promptVisible('Email : ');
   if (!email || !email.includes('@')) { console.error('Email invalide.'); process.exit(1); }
 
   const existing = await pool.query('SELECT id FROM utilisateur WHERE email = $1', [email]);
   if (existing.rows.length > 0) {
     console.error('Un utilisateur avec cet email existe déjà.');
+    await pool.end();
     process.exit(1);
   }
 
-  const pwd1 = await prompt('Mot de passe (min. 8 caractères) : ', true);
-  if (!pwd1 || pwd1.length < 8) { console.error('Le mot de passe doit faire au moins 8 caractères.'); process.exit(1); }
+  const pwd1 = await promptHidden('Mot de passe (min. 8 caractères) : ');
+  if (!pwd1 || pwd1.length < 8) {
+    console.error('Le mot de passe doit faire au moins 8 caractères.');
+    await pool.end();
+    process.exit(1);
+  }
 
-  const pwd2 = await prompt('Confirmer le mot de passe : ', true);
-  if (pwd1 !== pwd2) { console.error('Les mots de passe ne correspondent pas.'); process.exit(1); }
+  const pwd2 = await promptHidden('Confirmer le mot de passe : ');
+  if (pwd1 !== pwd2) {
+    console.error('Les mots de passe ne correspondent pas.');
+    await pool.end();
+    process.exit(1);
+  }
 
   const hash = await bcrypt.hash(pwd1, BCRYPT_ROUNDS);
 
@@ -84,7 +105,8 @@ async function main() {
   await pool.end();
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error('Erreur:', err.message);
+  try { await pool.end(); } catch {}
   process.exit(1);
 });
