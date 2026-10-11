@@ -95,6 +95,9 @@ cd backend && npm run import:kobo -- chemin/vers/export.xlsx --dry-run
 cd backend && npm run import:kobo -- chemin/vers/export.xlsx --media chemin/vers/medias.zip
 cd backend && npm run import:kobo -- chemin/vers/export.xlsx --media chemin/vers/medias.zip --dry-run
 
+# Créer le premier administrateur (mot de passe interactif, jamais dans le code)
+cd backend && npm run create:admin
+
 # Docker (déploiement production)
 docker compose up -d --build
 ```
