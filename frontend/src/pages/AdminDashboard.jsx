@@ -237,7 +237,7 @@ function ImageManager() {
       const formData = new FormData();
       formData.append('image', file);
       const token = localStorage.getItem('access_token');
-      const apiUrl = import.meta.env.VITE_API_URL;
+      const apiUrl = import.meta.env.VITE_API_URL || '/api';
       const res = await fetch(`${apiUrl}/images/${biblioId}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
@@ -260,7 +260,7 @@ function ImageManager() {
   async function handleDelete(imageId) {
     try {
       const token = localStorage.getItem('access_token');
-      const apiUrl = import.meta.env.VITE_API_URL;
+      const apiUrl = import.meta.env.VITE_API_URL || '/api';
       const res = await fetch(`${apiUrl}/images/${imageId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
