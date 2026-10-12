@@ -114,6 +114,7 @@ function FichesTab({ fiches, loading, userId }) {
             <th>Ville</th>
             <th>Statut</th>
             <th>Mise à jour</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -132,6 +133,11 @@ function FichesTab({ fiches, loading, userId }) {
               </td>
               <td style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
                 {new Date(f.updated_at).toLocaleDateString('fr-FR')}
+              </td>
+              <td>
+                <Link to={`/bibliotheque/${f.id}/modifier`} className="btn btn-ghost btn-sm">
+                  Modifier
+                </Link>
               </td>
             </tr>
           ))}

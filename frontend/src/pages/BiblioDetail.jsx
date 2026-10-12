@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { apiGet } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import MapView from '../components/MapView';
 import AvisSection from '../components/AvisSection';
+import ActivitesSection from '../components/ActivitesSection';
 import SignalementForm from '../components/SignalementForm';
 import { useLightMode } from '../contexts/LightModeContext';
 
@@ -85,7 +87,9 @@ export default function BiblioDetail() {
     </main>
   );
 
+  const { user } = useAuth();
   const { lightMode } = useLightMode();
+  const canEdit = user && ['administrateur', 'responsable_bibliotheque', 'enqueteur'].includes(user.role);
   const loc = biblio.localisation;
   const hasCoords = loc && loc.latitude && loc.longitude;
   const mapLink = hasCoords
@@ -108,6 +112,11 @@ export default function BiblioDetail() {
           <span className="detail-date">
             Mis à jour le {new Date(biblio.updated_at).toLocaleDateString('fr-FR')}
           </span>
+          {canEdit && (
+            <Link to={`/bibliotheque/${id}/modifier`} className="btn btn-ghost btn-sm">
+              Modifier
+            </Link>
+          )}
         </div>
       </div>
 
@@ -245,6 +254,8 @@ export default function BiblioDetail() {
           </Section>
         )}
       </div>
+
+      <ActivitesSection bibliothequeId={id} />
 
       <div style={{ marginTop: '28px' }}>
         <AvisSection bibliothequeId={id} />

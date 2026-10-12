@@ -11,6 +11,7 @@ import Register from './pages/Register';
 import AdminDashboard from './pages/AdminDashboard';
 import MonEspace from './pages/MonEspace';
 import SaisieTerrain from './pages/SaisieTerrain';
+import EditFiche from './pages/EditFiche';
 import Stats from './pages/Stats';
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/recherche" element={<Search />} />
             <Route path="/bibliotheque/:id" element={<BiblioDetail />} />
+            <Route path="/bibliotheque/:id/modifier" element={<EditFiche />} />
             <Route path="/connexion" element={<Login />} />
             <Route path="/inscription" element={<Register />} />
             <Route path="/admin" element={<AdminDashboard />} />

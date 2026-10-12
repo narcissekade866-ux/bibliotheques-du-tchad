@@ -14,6 +14,7 @@ const avisRouter = require('./routes/avis');
 const statsRouter = require('./routes/stats');
 const signalementsRouter = require('./routes/signalements');
 const notificationsRouter = require('./routes/notifications');
+const activitesRouter = require('./routes/activites');
 
 const allowedOrigins = (process.env.CORS_ORIGIN || '')
   .split(',')
@@ -52,6 +53,7 @@ app.use('/api/avis', avisRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/signalements', signalementsRouter);
 app.use('/api/notifications', notificationsRouter);
+app.use('/api/activites', activitesRouter);
 
 app.use(errorHandler);
 
