@@ -35,11 +35,11 @@ export default function Header() {
           <Link to="/" className="header-link">Carte</Link>
           <Link to="/recherche" className="header-link">Recherche</Link>
           <Link to="/statistiques" className="header-link">Stats</Link>
+          {(isResponsable || isEnqueteur || isAdmin) && (
+            <Link to="/saisie-terrain" className="header-link">Saisie terrain</Link>
+          )}
           {(isResponsable || isEnqueteur) && (
-            <>
-              <Link to="/saisie-terrain" className="header-link">Saisie terrain</Link>
-              <Link to="/mon-espace" className="header-link">Mon espace</Link>
-            </>
+            <Link to="/mon-espace" className="header-link">Mon espace</Link>
           )}
           {isAdmin && (
             <Link to="/admin" className="header-link header-link-accent">Admin</Link>

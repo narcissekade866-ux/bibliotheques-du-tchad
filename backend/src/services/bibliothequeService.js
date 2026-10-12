@@ -74,6 +74,60 @@ async function create(data, userId) {
       );
     }
 
+    if (data.horaires && data.horaires.length > 0) {
+      for (const h of data.horaires) {
+        await client.query(
+          `INSERT INTO horaires
+            (bibliotheque_id, jour, heure_ouverture, heure_fermeture,
+             horaires_variables, ouvert_vacances, periodes_fermeture)
+           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+          [biblio.id, h.jour, h.heure_ouverture || null, h.heure_fermeture || null,
+           h.horaires_variables || false, h.ouvert_vacances || null, h.periodes_fermeture || null]
+        );
+      }
+    }
+
+    await insertSection(client, 'conditions_acces', biblio.id, data.conditions_acces,
+      ['acces_gratuit','montant_par_visite','abonnement_mensuel','abonnement_trimestriel',
+       'abonnement_annuel','conditions_inscription','consultation_sans_inscription',
+       'conditions_eleves_etudiants','acces_personnes_exterieures','modes_paiement']);
+
+    await insertSection(client, 'pret_consultation', biblio.id, data.pret_consultation,
+      ['lecture_sur_place','emprunt_domicile','nb_max_livres_empruntables','duree_max_pret',
+       'penalites_retard','systeme_suivi_prets','livres_exclus_pret','action_si_non_retour']);
+
+    await insertSection(client, 'public_frequentation', biblio.id, data.public_frequentation,
+      ['public_cible','frequentation_moyenne_jour','frequentation_moyenne_semaine',
+       'moments_forte_frequentation','outil_suivi_frequentation','motifs_frequentation',
+       'freins_frequentation_jeunes','accessible_handicap']);
+
+    await insertSection(client, 'collection_catalogue', biblio.id, data.collection_catalogue,
+      ['nb_livres_estime','source_du_nombre','mode_classement','domaines_couverts',
+       'domaine_principal','types_ouvrages','langues_disponibles','etat_des_livres',
+       'accepte_dons','besoins_prioritaires_livres','dispose_catalogue','format_catalogue',
+       'mise_a_jour_catalogue','logiciel_gestion']);
+
+    await insertSection(client, 'services', biblio.id, data.services,
+      ['salle_lecture','nb_places','espaces_disponibles','accompagnement_recherche',
+       'wifi_gratuit','wifi_payant','ordinateurs_libre_acces','nb_ordinateurs',
+       'imprimante','photocopieur','scanner','autres_services']);
+
+    await insertSection(client, 'activite', biblio.id, data.activite,
+      ['organise_activites','types_activites','frequence','public_participant',
+       'gratuites','besoins_organisation']);
+
+    await insertSection(client, 'infrastructure', biblio.id, data.infrastructure,
+      ['problemes_materiels','besoin_rehabilitation','types_travaux']);
+
+    await insertSection(client, 'communication', biblio.id, data.communication,
+      ['canaux_decouverte','site_web','reseaux_sociaux','whatsapp_public',
+       'email_public','interesse_fiche_numerique']);
+
+    await insertSection(client, 'besoins_partenariats', biblio.id, data.besoins_partenariats,
+      ['defis_principaux','types_appui_necessaire','appui_prioritaire',
+       'a_deja_recu_appui','partenaire_precedent','recherche_partenaires',
+       'type_partenariat_souhaite']);
+
     await client.query('COMMIT');
     return { bibliotheque: biblio };
   } catch (err) {
@@ -82,6 +136,19 @@ async function create(data, userId) {
   } finally {
     client.release();
   }
+}
+
+async function insertSection(client, table, biblioId, data, fields) {
+  if (!data) return;
+  const hasValue = fields.some((f) => data[f] !== undefined && data[f] !== null && data[f] !== '');
+  if (!hasValue) return;
+  const cols = ['bibliotheque_id', ...fields];
+  const vals = [biblioId, ...fields.map((f) => data[f] ?? null)];
+  const placeholders = cols.map((_, i) => `$${i + 1}`).join(',');
+  await client.query(
+    `INSERT INTO ${table} (${cols.join(',')}) VALUES (${placeholders})`,
+    vals
+  );
 }
 
 async function getById(id, userRole) {
