@@ -1,5 +1,5 @@
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -11,10 +11,10 @@ L.Icon.Default.mergeOptions({
 });
 
 const STATUT_COLORS = {
-  fonctionnel: '#2d7d46',
-  partiellement_fonctionnel: '#e67e22',
-  non_fonctionnel: '#c0392b',
-  temporairement_ferme: '#7f8c8d',
+  fonctionnel: '#1B7A3D',
+  partiellement_fonctionnel: '#D4920A',
+  non_fonctionnel: '#C0392B',
+  temporairement_ferme: '#8A9690',
 };
 
 function createColorIcon(color) {
@@ -76,16 +76,24 @@ export default function MapView({ bibliotheques, center, zoom, onMarkerClick }) 
           }}
         >
           <Popup>
-            <strong>{b.nom_officiel}</strong>
-            {b.ville_nom && <div>{b.quartier ? `${b.quartier}, ` : ''}{b.ville_nom}</div>}
-            {b.type && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{b.type}</div>}
-            {b.distance_m != null && (
-              <div style={{ fontSize: '12px', marginTop: '4px', color: 'var(--text-muted)' }}>
-                {b.distance_m < 1000
-                  ? `${Math.round(b.distance_m)} m`
-                  : `${(b.distance_m / 1000).toFixed(1)} km`}
-              </div>
-            )}
+            <div style={{ fontFamily: 'var(--sans)', lineHeight: 1.5 }}>
+              <strong style={{ fontSize: '14px', color: '#174D36' }}>{b.nom_officiel}</strong>
+              {b.ville_nom && (
+                <div style={{ fontSize: '13px', color: '#65736A', marginTop: '2px' }}>
+                  {b.quartier ? `${b.quartier}, ` : ''}{b.ville_nom}
+                </div>
+              )}
+              {b.type && (
+                <div style={{ fontSize: '12px', color: '#8A9690', marginTop: '4px' }}>{b.type}</div>
+              )}
+              {b.distance_m != null && (
+                <div style={{ fontSize: '12px', marginTop: '4px', color: '#8A9690' }}>
+                  {b.distance_m < 1000
+                    ? `${Math.round(b.distance_m)} m`
+                    : `${(b.distance_m / 1000).toFixed(1)} km`}
+                </div>
+              )}
+            </div>
           </Popup>
         </Marker>
       ))}

@@ -1,49 +1,53 @@
 import { Link } from 'react-router-dom';
 
 const TYPE_LABELS = {
-  publique: 'Publique',
-  universitaire: 'Universitaire',
-  scolaire: 'Scolaire',
-  specialisee: 'Spécialisée',
-  communautaire: 'Communautaire',
-  privee: 'Privée',
-  associative: 'Associative',
-  autre: 'Autre',
+  publique: 'Publique', universitaire: 'Universitaire', scolaire: 'Scolaire',
+  specialisee: 'Spécialisée', communautaire: 'Communautaire', privee: 'Privée',
+  associative: 'Associative', autre: 'Autre',
 };
 
 const STATUT_LABELS = {
-  fonctionnel: { text: 'En fonctionnement', color: '#2d7d46' },
-  partiellement_fonctionnel: { text: 'Partiellement fonctionnel', color: '#e67e22' },
-  non_fonctionnel: { text: 'Non fonctionnel', color: '#c0392b' },
-  temporairement_ferme: { text: 'Temporairement fermé', color: '#7f8c8d' },
+  fonctionnel: { text: 'En fonctionnement', cls: 'badge-success' },
+  partiellement_fonctionnel: { text: 'Partiel', cls: 'badge-warning' },
+  non_fonctionnel: { text: 'Non fonctionnel', cls: 'badge-danger' },
+  temporairement_ferme: { text: 'Fermé temp.', cls: 'badge-neutral' },
 };
 
+function PinIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, flexShrink: 0 }}>
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  );
+}
+
 export default function BiblioCard({ biblio }) {
+  const statut = STATUT_LABELS[biblio.statut_fonctionnement];
+  const locationParts = [biblio.quartier, biblio.ville_nom].filter(Boolean).join(', ');
+
   return (
     <Link to={`/bibliotheque/${biblio.id}`} className="card card-interactive card-link">
-      <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 600 }}>
+      <h3 style={{ margin: '0 0 6px', fontSize: '16px', fontWeight: 600, color: 'var(--text)' }}>
         {biblio.nom_officiel}
       </h3>
-      <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-        {biblio.quartier && <span>{biblio.quartier}, </span>}
-        {biblio.ville_nom && <span>{biblio.ville_nom}</span>}
-      </div>
-      <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+      {locationParts && (
+        <div style={{ fontSize: '14px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <PinIcon />
+          {locationParts}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
         {biblio.type && (
           <span className="badge badge-primary">
             {TYPE_LABELS[biblio.type] || biblio.type}
           </span>
         )}
-        {biblio.statut_fonctionnement && biblio.statut_fonctionnement !== 'fonctionnel' && (
-          <span style={{
-            fontSize: '11px', padding: '2px 8px', borderRadius: '10px',
-            color: '#fff', background: STATUT_LABELS[biblio.statut_fonctionnement]?.color || '#7f8c8d',
-          }}>
-            {STATUT_LABELS[biblio.statut_fonctionnement]?.text || biblio.statut_fonctionnement}
-          </span>
+        {statut && biblio.statut_fonctionnement !== 'fonctionnel' && (
+          <span className={`badge ${statut.cls}`}>{statut.text}</span>
         )}
         {biblio.distance_m != null && (
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
             {biblio.distance_m < 1000
               ? `${Math.round(biblio.distance_m)} m`
               : `${(biblio.distance_m / 1000).toFixed(1)} km`}

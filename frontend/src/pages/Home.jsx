@@ -50,7 +50,7 @@ export default function Home() {
       <section className="hero">
         <div className="container">
           <h1>Bibliofinder</h1>
-          <p>Cartographie des bibliothèques du Tchad — Trouvez une bibliothèque près de chez vous</p>
+          <p>Cartographie des bibliothèques du Tchad</p>
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <SearchBar onSearch={handleSearch} />
           </div>
@@ -60,7 +60,7 @@ export default function Home() {
             </div>
           )}
           <p className="hero-notice">
-            Ce répertoire est en cours de constitution : toutes les bibliothèques du Tchad ne sont pas encore recensées. De nouvelles fiches sont ajoutées régulièrement.
+            Ce répertoire est en cours de constitution. De nouvelles fiches sont ajoutées régulièrement.
           </p>
         </div>
       </section>
@@ -68,7 +68,7 @@ export default function Home() {
       {!lightMode && (
         <section style={{ height: '50vh', minHeight: '300px' }}>
           {loading ? (
-            <div className="skeleton" style={{ height: '100%' }} />
+            <div className="skeleton" style={{ height: '100%', borderRadius: 0 }} />
           ) : (
             <MapView
               bibliotheques={bibliotheques}
@@ -81,8 +81,8 @@ export default function Home() {
       )}
 
       {bibliotheques.length > 0 && (
-        <section className="container" style={{ padding: '32px 16px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 20px' }}>
+        <section className="container" style={{ padding: '36px 16px 40px' }}>
+          <h2 style={{ margin: '0 0 20px' }}>
             Dernières bibliothèques ajoutées
           </h2>
           <div className="grid grid-cards">

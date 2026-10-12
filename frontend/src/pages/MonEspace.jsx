@@ -1,13 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { apiGet, apiPut, apiPost } from '../services/api';
+import { apiGet, apiPut } from '../services/api';
 
 const STATUT_LABELS = {
-  en_attente: 'En attente',
-  valide: 'Validée',
-  rejete: 'Rejetée',
-  brouillon: 'Brouillon',
+  en_attente: { text: 'En attente', cls: 'badge-warning' },
+  valide: { text: 'Validée', cls: 'badge-success' },
+  rejete: { text: 'Rejetée', cls: 'badge-danger' },
+  brouillon: { text: 'Brouillon', cls: 'badge-neutral' },
+};
+
+const ROLE_LABELS = {
+  responsable_bibliotheque: 'Responsable de bibliothèque',
+  enqueteur: 'Enquêteur terrain',
+  administrateur: 'Administrateur',
+  visiteur: 'Visiteur',
 };
 
 export default function MonEspace() {
@@ -61,11 +68,9 @@ export default function MonEspace() {
 
   return (
     <main className="container" style={{ padding: '28px 16px', flex: 1 }}>
-      <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '4px' }}>
-        Mon espace
-      </h1>
-      <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: 0, marginBottom: '20px' }}>
-        {user.nom} &middot; {user.role === 'responsable_bibliotheque' ? 'Responsable de bibliothèque' : user.role === 'enqueteur' ? 'Enquêteur terrain' : user.role}
+      <h1 style={{ margin: '0 0 4px' }}>Mon espace</h1>
+      <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: 0, marginBottom: '24px' }}>
+        {user.nom} &middot; {ROLE_LABELS[user.role] || user.role}
       </p>
 
       <div className="tabs">
@@ -73,12 +78,12 @@ export default function MonEspace() {
           Mes fiches
         </button>
         <button className={`tab ${tab === 'notifications' ? 'tab-active' : ''}`} onClick={() => setTab('notifications')}>
-          Notifications {unread > 0 && <span className="badge badge-danger" style={{ marginLeft: '6px' }}>{unread}</span>}
+          Notifications {unread > 0 && <span className="badge badge-danger" style={{ marginLeft: '6px', fontSize: '11px' }}>{unread}</span>}
         </button>
       </div>
 
       {tab === 'fiches' && (
-        <FichesTab fiches={fiches} loading={loadingData} userId={user.id} />
+        <FichesTab fiches={fiches} loading={loadingData} />
       )}
 
       {tab === 'notifications' && (
@@ -93,8 +98,8 @@ export default function MonEspace() {
   );
 }
 
-function FichesTab({ fiches, loading, userId }) {
-  if (loading) return <p style={{ color: 'var(--text-muted)' }}>Chargement…</p>;
+function FichesTab({ fiches, loading }) {
+  if (loading) return <p style={{ color: 'var(--text-muted)' }}>Chargement...</p>;
 
   if (fiches.length === 0) {
     return (
@@ -118,29 +123,30 @@ function FichesTab({ fiches, loading, userId }) {
           </tr>
         </thead>
         <tbody>
-          {fiches.map((f) => (
-            <tr key={f.id}>
-              <td>
-                <Link to={`/bibliotheque/${f.id}`} style={{ fontWeight: 500 }}>
-                  {f.nom_officiel}
-                </Link>
-              </td>
-              <td style={{ color: 'var(--text-secondary)' }}>{f.ville_nom || '—'}</td>
-              <td>
-                <span className={`badge ${f.statut_validation === 'valide' ? 'badge-primary' : f.statut_validation === 'rejete' ? 'badge-danger' : 'badge-accent'}`}>
-                  {STATUT_LABELS[f.statut_validation] || f.statut_validation}
-                </span>
-              </td>
-              <td style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                {new Date(f.updated_at).toLocaleDateString('fr-FR')}
-              </td>
-              <td>
-                <Link to={`/bibliotheque/${f.id}/modifier`} className="btn btn-ghost btn-sm">
-                  Modifier
-                </Link>
-              </td>
-            </tr>
-          ))}
+          {fiches.map((f) => {
+            const s = STATUT_LABELS[f.statut_validation] || { text: f.statut_validation, cls: 'badge-neutral' };
+            return (
+              <tr key={f.id}>
+                <td>
+                  <Link to={`/bibliotheque/${f.id}`} style={{ fontWeight: 500 }}>
+                    {f.nom_officiel}
+                  </Link>
+                </td>
+                <td style={{ color: 'var(--text-secondary)' }}>{f.ville_nom || '—'}</td>
+                <td>
+                  <span className={`badge ${s.cls}`}>{s.text}</span>
+                </td>
+                <td style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                  {new Date(f.updated_at).toLocaleDateString('fr-FR')}
+                </td>
+                <td>
+                  <Link to={`/bibliotheque/${f.id}/modifier`} className="btn btn-ghost btn-sm">
+                    Modifier
+                  </Link>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -148,7 +154,7 @@ function FichesTab({ fiches, loading, userId }) {
 }
 
 function NotificationsTab({ notifications, loading, onMarkRead, onMarkAllRead }) {
-  if (loading) return <p style={{ color: 'var(--text-muted)' }}>Chargement…</p>;
+  if (loading) return <p style={{ color: 'var(--text-muted)' }}>Chargement...</p>;
 
   const unread = notifications.filter((n) => !n.lue).length;
 
@@ -174,10 +180,13 @@ function NotificationsTab({ notifications, loading, onMarkRead, onMarkAllRead })
               className="card"
               style={{
                 opacity: n.lue ? 0.7 : 1,
-                borderLeft: n.lue ? undefined : '3px solid var(--primary)',
+                borderLeft: n.lue ? undefined : '3px solid var(--accent)',
                 cursor: n.lue ? 'default' : 'pointer',
               }}
               onClick={() => !n.lue && onMarkRead(n.id)}
+              role={n.lue ? undefined : 'button'}
+              tabIndex={n.lue ? undefined : 0}
+              onKeyDown={(e) => !n.lue && e.key === 'Enter' && onMarkRead(n.id)}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '12px' }}>
                 <div>

@@ -13,6 +13,21 @@ const JOUR_LABELS = {
   jeudi: 'Jeudi', vendredi: 'Vendredi', samedi: 'Samedi', dimanche: 'Dimanche',
 };
 
+const STATUT_MAP = {
+  fonctionnel: { text: 'En fonctionnement', cls: 'badge-success' },
+  non_fonctionnel: { text: 'Non fonctionnel', cls: 'badge-danger' },
+  partiellement_fonctionnel: { text: 'Partiellement fonctionnel', cls: 'badge-warning' },
+  temporairement_ferme: { text: 'Temporairement fermé', cls: 'badge-neutral' },
+};
+
+const TYPE_MAP = {
+  publique: 'Publique', universitaire: 'Universitaire', scolaire: 'Scolaire',
+  specialisee: 'Spécialisée', communautaire: 'Communautaire', privee: 'Privée',
+  associative: 'Associative', autre: 'Autre',
+};
+
+const OUI_NON_MAP = { oui: 'Oui', non: 'Non', partiel: 'Partiel', parfois: 'Parfois' };
+
 function Section({ title, children }) {
   if (!children) return null;
   return (
@@ -23,29 +38,66 @@ function Section({ title, children }) {
   );
 }
 
-function Field({ label, value }) {
+function Row({ label, value, suffix }) {
   if (value == null || value === '' || (Array.isArray(value) && value.length === 0)) return null;
   const display = Array.isArray(value) ? value.join(', ') : String(value);
   return (
-    <div className="field-value">
-      <div className="field-label">{label}</div>
-      <div>{display}</div>
+    <div className="field-row">
+      <span className="field-label">{label}</span>
+      <span className="field-value">{display}{suffix || ''}</span>
     </div>
   );
 }
 
-function OuiNonField({ label, value }) {
+function OuiNonRow({ label, value }) {
   if (!value) return null;
-  const display = { oui: 'Oui', non: 'Non', partiel: 'Partiel', parfois: 'Parfois' };
-  return <Field label={label} value={display[value] || value} />;
+  return <Row label={label} value={OUI_NON_MAP[value] || value} />;
+}
+
+function MapIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  );
+}
+
+function RouteIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+      <circle cx="6" cy="19" r="3" />
+      <path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15" />
+      <circle cx="18" cy="5" r="3" />
+    </svg>
+  );
+}
+
+function EditIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+
+function BackIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+      <line x1="19" y1="12" x2="5" y2="12" />
+      <polyline points="12 19 5 12 12 5" />
+    </svg>
+  );
 }
 
 function DetailSkeleton() {
   return (
     <main className="container" style={{ padding: '28px 16px', flex: 1 }}>
-      <div className="skeleton skeleton-text" style={{ width: '80px', marginBottom: '20px' }} />
-      <div className="skeleton skeleton-title" style={{ width: '60%' }} />
-      <div className="skeleton" style={{ height: '250px', marginBottom: '20px' }} />
+      <div className="skeleton skeleton-text" style={{ width: '100px', marginBottom: '24px' }} />
+      <div className="skeleton skeleton-title" style={{ width: '60%', height: '32px' }} />
+      <div className="skeleton" style={{ width: '40%', height: '16px', marginBottom: '20px' }} />
+      <div className="skeleton" style={{ height: '250px', marginBottom: '24px' }} />
       <div className="grid grid-detail">
         {[1,2,3].map(i => <div key={i} className="skeleton skeleton-card" />)}
       </div>
@@ -55,6 +107,8 @@ function DetailSkeleton() {
 
 export default function BiblioDetail() {
   const { id } = useParams();
+  const { user } = useAuth();
+  const { lightMode } = useLightMode();
   const [biblio, setBiblio] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -86,9 +140,6 @@ export default function BiblioDetail() {
       <p>Bibliothèque introuvable.</p>
     </main>
   );
-
-  const { user } = useAuth();
-  const { lightMode } = useLightMode();
   const canEdit = user && ['administrateur', 'responsable_bibliotheque', 'enqueteur'].includes(user.role);
   const loc = biblio.localisation;
   const hasCoords = loc && loc.latitude && loc.longitude;
@@ -96,32 +147,58 @@ export default function BiblioDetail() {
     ? `https://www.google.com/maps/dir/?api=1&destination=${loc.latitude},${loc.longitude}`
     : null;
 
+  const statut = STATUT_MAP[biblio.statut_fonctionnement] || { text: biblio.statut_fonctionnement, cls: 'badge-neutral' };
+  const typeLabel = TYPE_MAP[biblio.type] || biblio.type;
+  const locationParts = [loc?.quartier, loc?.subdivision_nom, loc?.ville_nom].filter(Boolean);
+
   return (
-    <main className="container" style={{ padding: '28px 16px', flex: 1 }}>
-      <Link to="/" style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-        &larr; Retour à la carte
+    <main className="container" style={{ padding: '28px 16px', flex: 1, maxWidth: '960px' }}>
+      <Link to="/recherche" style={{ fontSize: '14px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+        <BackIcon /> Retour
       </Link>
 
+      {/* --- Header --- */}
       <div className="detail-header">
         <h1 className="detail-title">{biblio.nom_officiel}</h1>
         {biblio.nom_alternatif && (
           <div className="detail-subtitle">{biblio.nom_alternatif}</div>
         )}
+        {locationParts.length > 0 && (
+          <div style={{ color: 'var(--text-secondary)', fontSize: '15px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <MapIcon />
+            {locationParts.join(', ')}
+          </div>
+        )}
         <div className="detail-meta">
-          {biblio.type && <span className="badge badge-primary">{biblio.type}</span>}
+          {typeLabel && <span className="badge badge-primary">{typeLabel}</span>}
+          <span className={`badge ${statut.cls}`}>{statut.text}</span>
           <span className="detail-date">
             Mis à jour le {new Date(biblio.updated_at).toLocaleDateString('fr-FR')}
           </span>
+        </div>
+
+        <div className="detail-actions">
+          {hasCoords && !lightMode && (
+            <Link to={`/?lat=${loc.latitude}&lng=${loc.longitude}`} className="btn btn-secondary btn-sm">
+              <MapIcon /> Voir sur la carte
+            </Link>
+          )}
+          {mapLink && (
+            <a href={mapLink} target="_blank" rel="noopener noreferrer" className="btn btn-accent btn-sm">
+              <RouteIcon /> Itinéraire
+            </a>
+          )}
           {canEdit && (
             <Link to={`/bibliotheque/${id}/modifier`} className="btn btn-ghost btn-sm">
-              Modifier
+              <EditIcon /> Modifier
             </Link>
           )}
         </div>
       </div>
 
+      {/* --- Map --- */}
       {hasCoords && !lightMode && (
-        <div className="map-container" style={{ height: '250px', marginBottom: '24px' }}>
+        <div className="map-container" style={{ height: '240px', marginBottom: '28px' }}>
           <MapView
             bibliotheques={[{ ...biblio, latitude: loc.latitude, longitude: loc.longitude }]}
             center={[parseFloat(loc.latitude), parseFloat(loc.longitude)]}
@@ -130,55 +207,46 @@ export default function BiblioDetail() {
         </div>
       )}
 
-      <div className="grid grid-detail">
+      {/* --- Info grid --- */}
+      <div className="grid grid-detail" style={{ marginBottom: '28px' }}>
         <Section title="Localisation">
           {loc && (
             <>
-              <Field label="Ville" value={loc.ville_nom} />
-              <Field label="Arrondissement" value={loc.subdivision_nom} />
-              <Field label="Quartier" value={loc.quartier} />
-              <Field label="Point de repère" value={loc.point_repere} />
-              {mapLink && (
-                <a href={mapLink} target="_blank" rel="noopener noreferrer"
-                   className="btn btn-primary btn-sm" style={{ marginTop: '8px' }}>
-                  Itinéraire
-                </a>
+              <Row label="Ville" value={loc.ville_nom} />
+              <Row label="Arrondissement" value={loc.subdivision_nom} />
+              <Row label="Quartier" value={loc.quartier} />
+              <Row label="Point de repère" value={loc.point_repere} />
+              {hasCoords && (
+                <Row label="Coordonnées" value={`${parseFloat(loc.latitude).toFixed(6)}, ${parseFloat(loc.longitude).toFixed(6)}`} />
               )}
             </>
           )}
         </Section>
 
         <Section title="Identification">
-          <Field label="Année de création" value={biblio.annee_creation} />
-          <Field label="Responsable" value={biblio.responsable_institution} />
-          <Field label="Statut" value={{
-            fonctionnel: 'En fonctionnement',
-            non_fonctionnel: 'Non fonctionnel',
-            partiellement_fonctionnel: 'Partiellement fonctionnel',
-            temporairement_ferme: 'Temporairement fermé',
-          }[biblio.statut_fonctionnement] || biblio.statut_fonctionnement} />
-          {biblio.raison_non_fonctionnel && <Field label="Raison" value={biblio.raison_non_fonctionnel} />}
+          <Row label="Année de création" value={biblio.annee_creation} />
+          <Row label="Responsable" value={biblio.responsable_institution} />
+          <Row label="Statut" value={statut.text} />
+          {biblio.raison_non_fonctionnel && <Row label="Raison" value={biblio.raison_non_fonctionnel} />}
         </Section>
 
         {biblio.horaires && biblio.horaires.length > 0 && (
-          <Section title="Horaires">
-            <table>
-              <tbody>
-                {biblio.horaires.map((h) => (
-                  <tr key={h.jour}>
-                    <td style={{ fontWeight: 500, paddingLeft: 0 }}>{JOUR_LABELS[h.jour]}</td>
-                    <td style={{ textAlign: 'right', paddingRight: 0, color: 'var(--text-secondary)' }}>
-                      {h.heure_ouverture && h.heure_fermeture
-                        ? `${h.heure_ouverture.slice(0, 5)} – ${h.heure_fermeture.slice(0, 5)}`
-                        : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <Section title="Horaires d'ouverture">
+            {biblio.horaires.map((h) => (
+              <div key={h.jour} className="field-row">
+                <span className="field-label" style={{ textTransform: 'none', letterSpacing: 0, fontSize: '14px' }}>
+                  {JOUR_LABELS[h.jour]}
+                </span>
+                <span className="field-value" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {h.heure_ouverture && h.heure_fermeture
+                    ? `${h.heure_ouverture.slice(0, 5)} – ${h.heure_fermeture.slice(0, 5)}`
+                    : <span style={{ color: 'var(--text-muted)' }}>Fermé</span>}
+                </span>
+              </div>
+            ))}
             {biblio.horaires[0]?.ouvert_vacances && (
-              <div style={{ marginTop: '12px' }}>
-                <OuiNonField label="Ouvert pendant les vacances" value={biblio.horaires[0].ouvert_vacances} />
+              <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-light)' }}>
+                <OuiNonRow label="Ouvert pendant les vacances" value={biblio.horaires[0].ouvert_vacances} />
               </div>
             )}
           </Section>
@@ -186,71 +254,80 @@ export default function BiblioDetail() {
 
         {biblio.conditions_acces && (
           <Section title="Conditions d'accès">
-            <OuiNonField label="Accès gratuit" value={biblio.conditions_acces.acces_gratuit} />
-            <Field label="Tarif par visite" value={biblio.conditions_acces.montant_par_visite && `${biblio.conditions_acces.montant_par_visite} FCFA`} />
-            <Field label="Abonnement mensuel" value={biblio.conditions_acces.abonnement_mensuel && `${biblio.conditions_acces.abonnement_mensuel} FCFA`} />
-            <Field label="Conditions d'inscription" value={biblio.conditions_acces.conditions_inscription} />
-            <OuiNonField label="Consultation sans inscription" value={biblio.conditions_acces.consultation_sans_inscription} />
-            <Field label="Conditions élèves/étudiants" value={biblio.conditions_acces.conditions_eleves_etudiants} />
-            <Field label="Modes de paiement" value={biblio.conditions_acces.modes_paiement} />
+            <OuiNonRow label="Accès gratuit" value={biblio.conditions_acces.acces_gratuit} />
+            <Row label="Tarif par visite" value={biblio.conditions_acces.montant_par_visite} suffix=" FCFA" />
+            <Row label="Abonnement mensuel" value={biblio.conditions_acces.abonnement_mensuel} suffix=" FCFA" />
+            <Row label="Conditions d'inscription" value={biblio.conditions_acces.conditions_inscription} />
+            <OuiNonRow label="Consultation sans inscription" value={biblio.conditions_acces.consultation_sans_inscription} />
+            <Row label="Conditions élèves/étudiants" value={biblio.conditions_acces.conditions_eleves_etudiants} />
+            <Row label="Modes de paiement" value={biblio.conditions_acces.modes_paiement} />
           </Section>
         )}
 
         {biblio.pret_consultation && (
           <Section title="Prêt et consultation">
-            <Field label="Lecture sur place" value={biblio.pret_consultation.lecture_sur_place ? 'Oui' : 'Non'} />
-            <OuiNonField label="Emprunt à domicile" value={biblio.pret_consultation.emprunt_domicile} />
-            <Field label="Livres empruntables (max)" value={biblio.pret_consultation.nb_max_livres_empruntables} />
-            <Field label="Durée max du prêt" value={biblio.pret_consultation.duree_max_pret} />
-            <Field label="Pénalités de retard" value={biblio.pret_consultation.penalites_retard} />
+            <Row label="Lecture sur place" value={biblio.pret_consultation.lecture_sur_place ? 'Oui' : undefined} />
+            <OuiNonRow label="Emprunt à domicile" value={biblio.pret_consultation.emprunt_domicile} />
+            <Row label="Livres empruntables (max)" value={biblio.pret_consultation.nb_max_livres_empruntables} />
+            <Row label="Durée max du prêt" value={biblio.pret_consultation.duree_max_pret} />
+            <Row label="Pénalités de retard" value={biblio.pret_consultation.penalites_retard} />
+            <Row label="Système de suivi" value={biblio.pret_consultation.systeme_suivi_prets} />
           </Section>
         )}
 
         {biblio.public_frequentation && (
           <Section title="Public et fréquentation">
-            <Field label="Public cible" value={biblio.public_frequentation.public_cible} />
-            <Field label="Fréquentation moyenne/jour" value={biblio.public_frequentation.frequentation_moyenne_jour} />
-            <Field label="Fréquentation moyenne/semaine" value={biblio.public_frequentation.frequentation_moyenne_semaine} />
-            <OuiNonField label="Accessible aux personnes handicapées" value={biblio.public_frequentation.accessible_handicap} />
+            <Row label="Public cible" value={biblio.public_frequentation.public_cible} />
+            <Row label="Fréquentation / jour" value={biblio.public_frequentation.frequentation_moyenne_jour} />
+            <Row label="Fréquentation / semaine" value={biblio.public_frequentation.frequentation_moyenne_semaine} />
+            <OuiNonRow label="Accessible PMR" value={biblio.public_frequentation.accessible_handicap} />
           </Section>
         )}
 
         {biblio.collection_catalogue && (
           <Section title="Collections et catalogue">
-            <Field label="Nombre de livres (estimé)" value={biblio.collection_catalogue.nb_livres_estime} />
-            <Field label="Domaines couverts" value={biblio.collection_catalogue.domaines_couverts} />
-            <Field label="Langues disponibles" value={biblio.collection_catalogue.langues_disponibles} />
-            <Field label="État des livres" value={biblio.collection_catalogue.etat_des_livres} />
-            <OuiNonField label="Accepte les dons" value={biblio.collection_catalogue.accepte_dons} />
-            <Field label="Logiciel de gestion" value={biblio.collection_catalogue.logiciel_gestion} />
+            <Row label="Nombre de livres" value={biblio.collection_catalogue.nb_livres_estime} />
+            <Row label="Domaines couverts" value={biblio.collection_catalogue.domaines_couverts} />
+            <Row label="Langues disponibles" value={biblio.collection_catalogue.langues_disponibles} />
+            <Row label="État des livres" value={biblio.collection_catalogue.etat_des_livres} />
+            <OuiNonRow label="Accepte les dons" value={biblio.collection_catalogue.accepte_dons} />
+            <Row label="Logiciel de gestion" value={biblio.collection_catalogue.logiciel_gestion} />
           </Section>
         )}
 
         {biblio.services && (
           <Section title="Services">
-            <Field label="Salle de lecture" value={biblio.services.salle_lecture ? `Oui (${biblio.services.nb_places || '?'} places)` : null} />
-            <Field label="Espaces disponibles" value={biblio.services.espaces_disponibles} />
-            <Field label="WiFi gratuit" value={biblio.services.wifi_gratuit ? 'Oui' : null} />
-            <Field label="Ordinateurs en libre accès" value={biblio.services.ordinateurs_libre_acces ? `Oui (${biblio.services.nb_ordinateurs || '?'})` : null} />
-            <Field label="Autres services" value={biblio.services.autres_services} />
+            <Row label="Salle de lecture" value={biblio.services.salle_lecture ? `Oui (${biblio.services.nb_places || '?'} places)` : undefined} />
+            <Row label="Espaces disponibles" value={biblio.services.espaces_disponibles} />
+            <Row label="WiFi gratuit" value={biblio.services.wifi_gratuit ? 'Oui' : undefined} />
+            <Row label="Ordinateurs en libre accès" value={biblio.services.ordinateurs_libre_acces ? `Oui (${biblio.services.nb_ordinateurs || '?'})` : undefined} />
+            <Row label="Autres services" value={biblio.services.autres_services} />
           </Section>
         )}
 
         {biblio.communication && (
-          <Section title="Contact">
-            <Field label="Site web" value={biblio.communication.site_web} />
-            <Field label="Email" value={biblio.communication.email_public} />
-            <Field label="WhatsApp" value={biblio.communication.whatsapp_public} />
-            <Field label="Réseaux sociaux" value={biblio.communication.reseaux_sociaux} />
+          <Section title="Contact et communication">
+            <Row label="Site web" value={biblio.communication.site_web} />
+            <Row label="Email" value={biblio.communication.email_public} />
+            <Row label="WhatsApp" value={biblio.communication.whatsapp_public} />
+            <Row label="Réseaux sociaux" value={biblio.communication.reseaux_sociaux} />
+          </Section>
+        )}
+
+        {biblio.infrastructure && (
+          <Section title="Infrastructure">
+            <Row label="Problèmes matériels" value={biblio.infrastructure.problemes_materiels} />
+            <OuiNonRow label="Besoin de réhabilitation" value={biblio.infrastructure.besoin_rehabilitation} />
+            <Row label="Travaux nécessaires" value={biblio.infrastructure.types_travaux} />
           </Section>
         )}
 
         {biblio.besoins_partenariats && (
           <Section title="Besoins et partenariats">
-            <Field label="Défis principaux" value={biblio.besoins_partenariats.defis_principaux} />
-            <Field label="Types d'appui nécessaire" value={biblio.besoins_partenariats.types_appui_necessaire} />
-            <Field label="Appui prioritaire" value={biblio.besoins_partenariats.appui_prioritaire} />
-            <Field label="Recherche de partenaires" value={biblio.besoins_partenariats.recherche_partenaires ? 'Oui' : null} />
+            <Row label="Défis principaux" value={biblio.besoins_partenariats.defis_principaux} />
+            <Row label="Types d'appui nécessaire" value={biblio.besoins_partenariats.types_appui_necessaire} />
+            <Row label="Appui prioritaire" value={biblio.besoins_partenariats.appui_prioritaire} />
+            <Row label="Recherche de partenaires" value={biblio.besoins_partenariats.recherche_partenaires ? 'Oui' : undefined} />
           </Section>
         )}
       </div>
@@ -274,7 +351,7 @@ function SignalementButton({ bibliothequeId }) {
   }
 
   return (
-    <div style={{ marginTop: '20px', textAlign: 'center' }}>
+    <div style={{ marginTop: '24px', textAlign: 'center', paddingBottom: '8px' }}>
       <button className="btn btn-ghost btn-sm" onClick={() => setOpen(true)}>
         Signaler une erreur sur cette fiche
       </button>

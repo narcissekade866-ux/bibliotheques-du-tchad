@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
 import { apiGet } from '../services/api';
 
-function Bar({ label, value, max }) {
+function Bar({ label, value, max, color }) {
   const pct = max > 0 ? (value / max) * 100 : 0;
   return (
-    <div style={{ marginBottom: '14px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '4px' }}>
+    <div style={{ marginBottom: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '6px' }}>
         <span style={{ color: 'var(--text-secondary)' }}>{label}</span>
-        <strong>{value}</strong>
+        <strong style={{ color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{value}</strong>
       </div>
-      <div style={{ height: '6px', background: 'var(--border)', borderRadius: '3px', overflow: 'hidden' }}>
+      <div style={{ height: '8px', background: 'var(--border-light)', borderRadius: '4px', overflow: 'hidden' }}>
         <div style={{
-          height: '100%', width: `${pct}%`, background: 'var(--primary)',
-          borderRadius: '3px', transition: 'width 600ms ease',
+          height: '100%', width: `${pct}%`,
+          background: color || 'var(--accent)',
+          borderRadius: '4px', transition: 'width 600ms ease',
         }} />
       </div>
     </div>
@@ -32,6 +33,12 @@ function StatsSkeleton() {
     </main>
   );
 }
+
+const TYPE_LABELS = {
+  publique: 'Publique', universitaire: 'Universitaire', scolaire: 'Scolaire',
+  specialisee: 'Spécialisée', communautaire: 'Communautaire', privee: 'Privée',
+  associative: 'Associative', autre: 'Autre',
+};
 
 export default function Stats() {
   const [data, setData] = useState(null);
@@ -57,17 +64,17 @@ export default function Stats() {
 
   return (
     <main className="container" style={{ padding: '32px 16px', flex: 1 }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 28px' }}>Statistiques</h1>
+      <h1 style={{ margin: '0 0 28px' }}>Statistiques</h1>
 
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', marginBottom: '32px' }}>
-        <div className="stat-card" style={{ background: 'var(--primary-light)' }}>
+      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', marginBottom: '32px' }}>
+        <div className="stat-card">
           <div className="stat-value">{data.bibliotheques_total}</div>
           <div className="stat-label">bibliothèques référencées</div>
         </div>
 
         {data.avis.total > 0 && (
-          <div className="stat-card" style={{ background: 'var(--accent-light)' }}>
-            <div className="stat-value" style={{ color: 'var(--accent)' }}>
+          <div className="stat-card">
+            <div className="stat-value" style={{ color: 'var(--warning)' }}>
               {data.avis.moyenne}/5
             </div>
             <div className="stat-label">note moyenne ({data.avis.total} avis)</div>
@@ -80,7 +87,7 @@ export default function Stats() {
           <div className="section-card">
             <h3 className="section-title">Par type</h3>
             {data.par_type.map((t) => (
-              <Bar key={t.type} label={t.type} value={t.total} max={maxType} />
+              <Bar key={t.type} label={TYPE_LABELS[t.type] || t.type} value={t.total} max={maxType} color="var(--primary)" />
             ))}
           </div>
         )}
@@ -89,7 +96,7 @@ export default function Stats() {
           <div className="section-card">
             <h3 className="section-title">Par ville</h3>
             {data.par_ville.map((v) => (
-              <Bar key={v.ville} label={v.ville} value={v.total} max={maxVille} />
+              <Bar key={v.ville} label={v.ville} value={v.total} max={maxVille} color="var(--accent)" />
             ))}
           </div>
         )}

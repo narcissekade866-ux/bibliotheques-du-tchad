@@ -27,15 +27,18 @@ export default function Login() {
   return (
     <main className="auth-page">
       <div className="auth-card">
+        <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+          <span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 500 }}>Bibliofinder</span>
+        </div>
         <h1 className="auth-title">Connexion</h1>
 
         {error && <div className="alert alert-error" style={{ marginBottom: '20px' }}>{error}</div>}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
           <label>
-            Email
+            Adresse email
             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email" />
+              autoComplete="email" placeholder="nom@exemple.com" />
           </label>
 
           <label>
@@ -44,7 +47,8 @@ export default function Login() {
               autoComplete="current-password" />
           </label>
 
-          <button type="submit" className="btn btn-primary btn-lg" disabled={submitting}>
+          <button type="submit" className="btn btn-primary btn-lg" disabled={submitting}
+            style={{ marginTop: '4px' }}>
             {submitting ? 'Connexion...' : 'Se connecter'}
           </button>
         </form>

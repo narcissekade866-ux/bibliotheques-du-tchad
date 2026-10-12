@@ -108,20 +108,16 @@ function GpsCapture({ onCapture, latitude, longitude, precision }) {
     };
   }, []);
 
-  const accColor = currentAccuracy == null ? '#999'
-    : currentAccuracy <= 10 ? '#27ae60'
-    : currentAccuracy <= 30 ? '#e67e22' : '#e74c3c';
-
   return (
-    <div style={{ padding:'16px', background:'var(--bg-secondary)', borderRadius:'var(--radius)', marginBottom:'12px' }}>
+    <div className="section-card" style={{ marginBottom:'12px', padding:'18px' }}>
       <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'12px' }}>
-        <button type="button" className="btn btn-primary btn-sm" onClick={start}
+        <button type="button" className="btn btn-accent btn-sm" onClick={start}
           disabled={status === 'acquiring' || status === 'locked'}>
           {status === 'acquiring' ? 'Acquisition en cours…' : status === 'locked' ? 'Position verrouillée' : 'Capturer la position GPS'}
         </button>
         {currentAccuracy != null && (
-          <span style={{ fontSize:'14px', fontWeight:600, color: accColor }}>
-            Précision : {currentAccuracy} m
+          <span className={`badge ${currentAccuracy <= 10 ? 'badge-success' : currentAccuracy <= 30 ? 'badge-warning' : 'badge-danger'}`}>
+            {currentAccuracy} m
           </span>
         )}
       </div>
@@ -132,19 +128,19 @@ function GpsCapture({ onCapture, latitude, longitude, precision }) {
         </p>
       )}
       {status === 'locked' && (
-        <p style={{ fontSize:'13px', color:'#27ae60', margin:0, fontWeight:500 }}>
+        <div className="alert alert-success" style={{ margin:0, padding:'8px 12px', fontSize:'13px' }}>
           Position GPS verrouillée avec une précision de {currentAccuracy} m.
-        </p>
+        </div>
       )}
       {status === 'error' && (
-        <p style={{ fontSize:'13px', color:'#e74c3c', margin:0 }}>
+        <div className="alert alert-error" style={{ margin:0, padding:'8px 12px', fontSize:'13px' }}>
           Impossible d'obtenir la position. Vérifiez les permissions GPS et réessayez.
-        </p>
+        </div>
       )}
       {status === 'unsupported' && (
-        <p style={{ fontSize:'13px', color:'#e74c3c', margin:0 }}>
+        <div className="alert alert-error" style={{ margin:0, padding:'8px 12px', fontSize:'13px' }}>
           La géolocalisation n'est pas supportée par ce navigateur.
-        </p>
+        </div>
       )}
 
       {latitude && (
@@ -434,15 +430,11 @@ export default function SaisieTerrain() {
 
       {tab === 'form' && (
         <form onSubmit={handleSubmit}>
-          <div style={{ display:'flex', gap:'6px', flexWrap:'wrap', marginBottom:'20px' }}>
-            {SECTIONS.map((s, i) => (
+          <div style={{ display:'flex', gap:'6px', flexWrap:'wrap', marginBottom:'24px' }}>
+            {SECTIONS.map((s) => (
               <button key={s.id} type="button"
-                style={{
-                  padding:'4px 10px', fontSize:'12px', borderRadius:'12px', border:'1px solid var(--border)',
-                  background: activeSection === s.id ? 'var(--primary)' : 'var(--bg)',
-                  color: activeSection === s.id ? '#fff' : 'var(--text-secondary)',
-                  cursor:'pointer',
-                }}
+                className={activeSection === s.id ? 'badge badge-primary' : 'badge badge-neutral'}
+                style={{ cursor:'pointer', padding:'5px 12px', fontSize:'12px', fontWeight: activeSection === s.id ? 600 : 400 }}
                 onClick={() => setActiveSection(s.id)}>
                 {s.label}
               </button>

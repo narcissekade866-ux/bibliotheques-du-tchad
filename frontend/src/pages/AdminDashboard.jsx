@@ -45,12 +45,10 @@ function PendingFiches({ fiches, onAction }) {
                 {[f.ville_nom, f.quartier].filter(Boolean).join(' — ')}
                 {f.cree_par_nom && ` · par ${f.cree_par_nom}`}
                 {f.statut_fonctionnement && f.statut_fonctionnement !== 'fonctionnel' && (
-                  <span style={{
-                    marginLeft: '8px', fontSize: '11px', padding: '1px 6px', borderRadius: '8px',
-                    color: '#fff',
-                    background: f.statut_fonctionnement === 'partiellement_fonctionnel' ? '#e67e22'
-                      : f.statut_fonctionnement === 'non_fonctionnel' ? '#c0392b' : '#7f8c8d',
-                  }}>
+                  <span className={`badge ${
+                    f.statut_fonctionnement === 'partiellement_fonctionnel' ? 'badge-warning'
+                      : f.statut_fonctionnement === 'non_fonctionnel' ? 'badge-danger' : 'badge-neutral'
+                  }`} style={{ marginLeft: '8px', fontSize: '11px' }}>
                     {f.statut_fonctionnement === 'partiellement_fonctionnel' ? 'Partiel.'
                       : f.statut_fonctionnement === 'non_fonctionnel' ? 'Non fonct.'
                       : 'Fermé temp.'}
@@ -560,8 +558,8 @@ export default function AdminDashboard() {
 
   if (!isAdmin) {
     return (
-      <main className="container empty-state" style={{ flex: 1 }}>
-        <h1 style={{ fontSize: '24px' }}>Accès refusé</h1>
+      <main className="container empty-state" style={{ flex: 1, padding: '48px 16px' }}>
+        <h1>Accès refusé</h1>
         <p>Cette page est réservée aux administrateurs.</p>
       </main>
     );
@@ -579,7 +577,7 @@ export default function AdminDashboard() {
 
   return (
     <main className="container" style={{ padding: '28px 16px', flex: 1 }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 24px' }}>Tableau de bord</h1>
+      <h1 style={{ margin: '0 0 24px' }}>Tableau de bord</h1>
 
       {stats && (
         <div className="grid grid-stats" style={{ marginBottom: '28px' }}>

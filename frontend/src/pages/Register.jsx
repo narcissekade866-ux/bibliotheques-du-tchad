@@ -33,6 +33,9 @@ export default function Register() {
   return (
     <main className="auth-page">
       <div className="auth-card">
+        <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+          <span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 500 }}>Bibliofinder</span>
+        </div>
         <h1 className="auth-title">Créer un compte</h1>
 
         {error && <div className="alert alert-error" style={{ marginBottom: '20px' }}>{error}</div>}
@@ -41,13 +44,13 @@ export default function Register() {
           <label>
             Nom complet
             <input type="text" required value={nom} onChange={(e) => setNom(e.target.value)}
-              autoComplete="name" />
+              autoComplete="name" placeholder="Prénom Nom" />
           </label>
 
           <label>
-            Email
+            Adresse email
             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email" />
+              autoComplete="email" placeholder="nom@exemple.com" />
           </label>
 
           <label>
@@ -65,7 +68,8 @@ export default function Register() {
               onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
           </label>
 
-          <button type="submit" className="btn btn-primary btn-lg" disabled={submitting}>
+          <button type="submit" className="btn btn-primary btn-lg" disabled={submitting}
+            style={{ marginTop: '4px' }}>
             {submitting ? 'Création...' : 'Créer mon compte'}
           </button>
         </form>

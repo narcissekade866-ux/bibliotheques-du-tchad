@@ -77,32 +77,43 @@ export default function Search() {
 
   return (
     <main className="container" style={{ padding: '28px 16px', flex: 1 }}>
+      <h1 style={{ margin: '0 0 20px' }}>Recherche</h1>
+
       <div className="search-controls">
         <SearchBar onSearch={handleSearch} initialQuery={q} />
-        <select value={type} onChange={handleTypeChange} style={{ minWidth: '150px', width: 'auto' }}>
-          <option value="">Tous les types</option>
-          <option value="publique">Publique</option>
-          <option value="universitaire">Universitaire</option>
-          <option value="scolaire">Scolaire</option>
-          <option value="specialisee">Spécialisée</option>
-          <option value="communautaire">Communautaire</option>
-          <option value="privee">Privée</option>
-          <option value="associative">Associative</option>
-        </select>
-        <select value={statut} onChange={handleStatutChange} style={{ minWidth: '150px', width: 'auto' }}>
-          <option value="">Tous les statuts</option>
-          <option value="fonctionnel">En fonctionnement</option>
-          <option value="partiellement_fonctionnel">Partiellement fonctionnel</option>
-          <option value="non_fonctionnel">Non fonctionnel</option>
-          <option value="temporairement_ferme">Temporairement fermé</option>
-        </select>
-        <div className="toggle-group">
-          <button className={`toggle-btn ${view === 'list' ? 'toggle-active' : ''}`}
-            onClick={() => setView('list')}>Liste</button>
-          <button className={`toggle-btn ${view === 'map' ? 'toggle-active' : ''}`}
-            onClick={() => setView('map')}>Carte</button>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <select value={type} onChange={handleTypeChange} style={{ minWidth: '150px', width: 'auto' }}>
+            <option value="">Tous les types</option>
+            <option value="publique">Publique</option>
+            <option value="universitaire">Universitaire</option>
+            <option value="scolaire">Scolaire</option>
+            <option value="specialisee">Spécialisée</option>
+            <option value="communautaire">Communautaire</option>
+            <option value="privee">Privée</option>
+            <option value="associative">Associative</option>
+          </select>
+          <select value={statut} onChange={handleStatutChange} style={{ minWidth: '150px', width: 'auto' }}>
+            <option value="">Tous les statuts</option>
+            <option value="fonctionnel">En fonctionnement</option>
+            <option value="partiellement_fonctionnel">Partiellement fonctionnel</option>
+            <option value="non_fonctionnel">Non fonctionnel</option>
+            <option value="temporairement_ferme">Temporairement fermé</option>
+          </select>
+          <div className="toggle-group">
+            <button className={`toggle-btn ${view === 'list' ? 'toggle-active' : ''}`}
+              onClick={() => setView('list')}>Liste</button>
+            <button className={`toggle-btn ${view === 'map' ? 'toggle-active' : ''}`}
+              onClick={() => setView('map')}>Carte</button>
+          </div>
         </div>
       </div>
+
+      {!loading && pagination && (
+        <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 16px' }}>
+          {pagination.total} résultat{pagination.total !== 1 ? 's' : ''}
+          {q && <> pour &laquo;&nbsp;{q}&nbsp;&raquo;</>}
+        </p>
+      )}
 
       {loading && (
         <div className="grid grid-cards">
@@ -113,7 +124,7 @@ export default function Search() {
       {!loading && bibliotheques.length === 0 && (
         <div className="empty-state">
           <p>Aucune bibliothèque trouvée.</p>
-          {q && <p>Essayez avec d'autres termes de recherche.</p>}
+          {q && <p style={{ fontSize: '14px' }}>Essayez avec d'autres termes de recherche.</p>}
         </div>
       )}
 
