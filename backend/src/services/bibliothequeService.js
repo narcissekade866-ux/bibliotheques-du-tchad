@@ -291,7 +291,7 @@ async function update(id, data, userId) {
 
 async function validateBibliotheque(id, action, motif, adminId) {
   const existing = await pool.query(
-    'SELECT id, statut_validation FROM bibliotheque WHERE id = $1',
+    'SELECT id, nom_officiel, statut_validation, cree_par_id FROM bibliotheque WHERE id = $1',
     [id]
   );
 
@@ -318,10 +318,74 @@ async function validateBibliotheque(id, action, motif, adminId) {
     );
   }
 
+  const creePar = existing.rows[0].cree_par_id;
+  if (creePar) {
+    const titre = action === 'valider'
+      ? 'Fiche validée'
+      : 'Fiche rejetée';
+    const message = action === 'valider'
+      ? `Votre fiche « ${existing.rows[0].nom_officiel} » a été validée et est maintenant visible publiquement.`
+      : `Votre fiche « ${existing.rows[0].nom_officiel} » a été rejetée. Motif : ${motif || 'non précisé'}.`;
+    await pool.query(
+      `INSERT INTO notification (destinataire_id, type, titre, message, bibliotheque_id)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [creePar, 'validation', titre, message, id]
+    );
+  }
+
   return { bibliotheque: result.rows[0] };
+}
+
+async function checkDoublons(nomOfficiel, latitude, longitude, excludeId) {
+  const conditions = [];
+  const params = [];
+  let idx = 1;
+
+  conditions.push(`SIMILARITY(b.nom_officiel, $${idx}) > 0.4`);
+  params.push(nomOfficiel);
+  idx++;
+
+  if (latitude && longitude) {
+    conditions.push(
+      `ST_DWithin(l.geom, ST_SetSRID(ST_MakePoint($${idx}, $${idx + 1}), 4326)::geography, 300)`
+    );
+    params.push(longitude, latitude);
+    idx += 2;
+  }
+
+  if (excludeId) {
+    conditions.push(`b.id != $${idx}`);
+    params.push(excludeId);
+    idx++;
+  }
+
+  const result = await pool.query(
+    `SELECT b.id, b.nom_officiel, l.latitude, l.longitude
+     FROM bibliotheque b
+     LEFT JOIN localisation l ON l.bibliotheque_id = b.id
+     WHERE ${conditions.join(' AND ')}
+     LIMIT 5`,
+    params
+  );
+  return result.rows;
+}
+
+async function listObsoletes() {
+  const result = await pool.query(
+    `SELECT b.id, b.nom_officiel, b.type, b.statut_validation, b.updated_at,
+            v.nom AS ville_nom, l.quartier
+     FROM bibliotheque b
+     LEFT JOIN localisation l ON l.bibliotheque_id = b.id
+     LEFT JOIN ville v ON v.id = l.ville_id
+     WHERE b.updated_at < NOW() - INTERVAL '12 months'
+       AND b.statut_validation = 'valide'
+     ORDER BY b.updated_at ASC`
+  );
+  return result.rows;
 }
 
 module.exports = {
   create, getById, list, update, validateBibliotheque,
+  checkDoublons, listObsoletes,
   adminBiblioSelect, PUBLIC_BIBLIO_FIELD_LIST, ADMIN_EXTRA_FIELD_LIST,
 };

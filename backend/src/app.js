@@ -12,6 +12,8 @@ const imagesRouter = require('./routes/images');
 const adminRouter = require('./routes/admin');
 const avisRouter = require('./routes/avis');
 const statsRouter = require('./routes/stats');
+const signalementsRouter = require('./routes/signalements');
+const notificationsRouter = require('./routes/notifications');
 
 const allowedOrigins = (process.env.CORS_ORIGIN || '')
   .split(',')
@@ -48,6 +50,8 @@ app.use('/api/images', imagesRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/avis', avisRouter);
 app.use('/api/stats', statsRouter);
+app.use('/api/signalements', signalementsRouter);
+app.use('/api/notifications', notificationsRouter);
 
 app.use(errorHandler);
 

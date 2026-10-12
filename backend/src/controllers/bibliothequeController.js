@@ -46,4 +46,18 @@ async function validateBiblio(req, res) {
   res.json(result);
 }
 
-module.exports = { create, getById, list, update, validateBiblio };
+async function checkDoublons(req, res) {
+  const { nom_officiel, latitude, longitude } = req.query;
+  if (!nom_officiel) {
+    return res.status(400).json({ message: 'nom_officiel requis' });
+  }
+  const doublons = await bibliothequeService.checkDoublons(
+    nom_officiel,
+    latitude ? parseFloat(latitude) : null,
+    longitude ? parseFloat(longitude) : null,
+    req.query.exclude_id || null
+  );
+  res.json({ doublons });
+}
+
+module.exports = { create, getById, list, update, validateBiblio, checkDoublons };

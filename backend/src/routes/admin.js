@@ -3,7 +3,7 @@ const { authenticateToken, requireRole } = require('../middlewares/auth');
 const { asyncHandler } = require('../middlewares/asyncHandler');
 const { validateUUID } = require('../middlewares/validateUUID');
 const { pool } = require('../config/db');
-const { adminBiblioSelect } = require('../services/bibliothequeService');
+const { adminBiblioSelect, listObsoletes } = require('../services/bibliothequeService');
 
 const router = express.Router();
 
@@ -88,6 +88,83 @@ router.put('/utilisateurs/:id/statut', validateUUID('id'), asyncHandler(async (r
   }
 
   res.json(result.rows[0]);
+}));
+
+router.get('/fiches-obsoletes', asyncHandler(async (req, res) => {
+  const rows = await listObsoletes();
+  res.json(rows);
+}));
+
+router.get('/signalements', asyncHandler(async (req, res) => {
+  const statut = req.query.statut || 'nouveau';
+  const result = await pool.query(
+    `SELECT s.*, b.nom_officiel
+     FROM signalement s
+     JOIN bibliotheque b ON b.id = s.bibliotheque_id
+     WHERE s.statut = $1
+     ORDER BY s.created_at DESC
+     LIMIT 50`,
+    [statut]
+  );
+  res.json(result.rows);
+}));
+
+router.put('/signalements/:id', validateUUID('id'), asyncHandler(async (req, res) => {
+  const { statut } = req.body;
+  if (!['en_cours', 'traite', 'rejete'].includes(statut)) {
+    return res.status(400).json({ message: 'Statut invalide' });
+  }
+  const result = await pool.query(
+    `UPDATE signalement SET statut = $1, traite_par_id = $2, traite_at = NOW()
+     WHERE id = $3 RETURNING *`,
+    [statut, req.user.id, req.params.id]
+  );
+  if (result.rows.length === 0) {
+    return res.status(404).json({ message: 'Signalement introuvable' });
+  }
+  res.json(result.rows[0]);
+}));
+
+router.get('/export/csv', asyncHandler(async (req, res) => {
+  const result = await pool.query(
+    `SELECT b.nom_officiel, b.nom_alternatif, b.type, b.statut_fonctionnement,
+            b.statut_validation, b.annee_creation, b.responsable_institution,
+            v.nom AS ville, l.quartier, l.latitude, l.longitude,
+            c.whatsapp_public, c.email_public, c.site_web,
+            bp.defis_principaux, bp.types_appui_necessaire, bp.appui_prioritaire
+     FROM bibliotheque b
+     LEFT JOIN localisation l ON l.bibliotheque_id = b.id
+     LEFT JOIN ville v ON v.id = l.ville_id
+     LEFT JOIN communication c ON c.bibliotheque_id = b.id
+     LEFT JOIN besoins_partenariats bp ON bp.bibliotheque_id = b.id
+     ORDER BY b.nom_officiel`
+  );
+
+  const headers = [
+    'nom_officiel', 'nom_alternatif', 'type', 'statut_fonctionnement',
+    'statut_validation', 'annee_creation', 'responsable_institution',
+    'ville', 'quartier', 'latitude', 'longitude',
+    'whatsapp_public', 'email_public', 'site_web',
+    'defis_principaux', 'types_appui_necessaire', 'appui_prioritaire',
+  ];
+
+  const escapeCsv = (val) => {
+    if (val == null) return '';
+    const s = Array.isArray(val) ? val.join('; ') : String(val);
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+    return s;
+  };
+
+  const lines = [
+    headers.join(','),
+    ...result.rows.map(row => headers.map(h => escapeCsv(row[h])).join(',')),
+  ];
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="bibliotheques-export.csv"');
+  res.send('﻿' + lines.join('\n'));
 }));
 
 module.exports = router;

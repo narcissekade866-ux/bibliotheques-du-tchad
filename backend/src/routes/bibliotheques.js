@@ -15,6 +15,14 @@ const {
 const router = express.Router();
 
 router.get('/', optionalAuth, validateQuery(listQuerySchema), asyncHandler(bibliothequeController.list));
+
+router.get(
+  '/check/doublons',
+  authenticateToken,
+  requireRole('administrateur', 'enqueteur', 'responsable_bibliotheque'),
+  asyncHandler(bibliothequeController.checkDoublons)
+);
+
 router.get('/:id', optionalAuth, validateUUID('id'), asyncHandler(bibliothequeController.getById));
 
 router.post(

@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { apiGet } from '../services/api';
 import MapView from '../components/MapView';
 import AvisSection from '../components/AvisSection';
+import SignalementForm from '../components/SignalementForm';
+import { useLightMode } from '../contexts/LightModeContext';
 
 const JOUR_LABELS = {
   lundi: 'Lundi', mardi: 'Mardi', mercredi: 'Mercredi',
@@ -83,6 +85,7 @@ export default function BiblioDetail() {
     </main>
   );
 
+  const { lightMode } = useLightMode();
   const loc = biblio.localisation;
   const hasCoords = loc && loc.latitude && loc.longitude;
   const mapLink = hasCoords
@@ -108,7 +111,7 @@ export default function BiblioDetail() {
         </div>
       </div>
 
-      {hasCoords && (
+      {hasCoords && !lightMode && (
         <div className="map-container" style={{ height: '250px', marginBottom: '24px' }}>
           <MapView
             bibliotheques={[{ ...biblio, latitude: loc.latitude, longitude: loc.longitude }]}
@@ -246,6 +249,24 @@ export default function BiblioDetail() {
       <div style={{ marginTop: '28px' }}>
         <AvisSection bibliothequeId={id} />
       </div>
+
+      <SignalementButton bibliothequeId={id} />
     </main>
+  );
+}
+
+function SignalementButton({ bibliothequeId }) {
+  const [open, setOpen] = useState(false);
+
+  if (open) {
+    return <SignalementForm bibliothequeId={bibliothequeId} onClose={() => setOpen(false)} />;
+  }
+
+  return (
+    <div style={{ marginTop: '20px', textAlign: 'center' }}>
+      <button className="btn btn-ghost btn-sm" onClick={() => setOpen(true)}>
+        Signaler une erreur sur cette fiche
+      </button>
+    </div>
   );
 }

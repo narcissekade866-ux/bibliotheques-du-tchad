@@ -329,6 +329,210 @@ function ImageManager() {
   );
 }
 
+function SignalementsTab() {
+  const [signalements, setSignalements] = useState([]);
+  const [filtre, setFiltre] = useState('nouveau');
+  const [loading, setLoading] = useState(true);
+  const [feedback, setFeedback] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await apiGet(`/admin/signalements?statut=${filtre}`);
+      setSignalements(data);
+    } catch { setSignalements([]); }
+    setLoading(false);
+  }, [filtre]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function updateStatut(id, statut) {
+    try {
+      await apiPut(`/admin/signalements/${id}`, { statut });
+      setFeedback('Signalement mis à jour');
+      load();
+    } catch (err) { setFeedback(err.message); }
+  }
+
+  const TYPE_LABELS = {
+    horaires_incorrects: 'Horaires incorrects',
+    adresse_incorrecte: 'Adresse incorrecte',
+    fermeture: 'Fermeture',
+    autre: 'Autre',
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        {['nouveau', 'en_cours', 'traite', 'rejete'].map((s) => (
+          <button key={s} className={`btn btn-sm ${filtre === s ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setFiltre(s)}>
+            {s === 'nouveau' ? 'Nouveaux' : s === 'en_cours' ? 'En cours' : s === 'traite' ? 'Traités' : 'Rejetés'}
+          </button>
+        ))}
+      </div>
+      {feedback && <div className="alert alert-success" style={{ marginBottom: '12px' }}>{feedback}</div>}
+      {loading ? <p style={{ color: 'var(--text-muted)' }}>Chargement…</p> :
+        signalements.length === 0 ? <div className="empty-state"><p>Aucun signalement.</p></div> : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {signalements.map((s) => (
+              <div key={s.id} className="card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '12px', flexWrap: 'wrap' }}>
+                  <div>
+                    <strong style={{ fontSize: '14px' }}>{s.nom_officiel}</strong>
+                    <span className="badge badge-accent" style={{ marginLeft: '8px' }}>{TYPE_LABELS[s.type] || s.type}</span>
+                    <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '6px' }}>{s.description}</div>
+                    {s.email_contact && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Contact : {s.email_contact}</div>}
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      {new Date(s.created_at).toLocaleDateString('fr-FR')}
+                    </div>
+                  </div>
+                  {filtre === 'nouveau' && (
+                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                      <button className="btn btn-primary btn-sm" onClick={() => updateStatut(s.id, 'en_cours')}>Prendre en charge</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => updateStatut(s.id, 'rejete')}>Rejeter</button>
+                    </div>
+                  )}
+                  {filtre === 'en_cours' && (
+                    <button className="btn btn-primary btn-sm" onClick={() => updateStatut(s.id, 'traite')}>Marquer traité</button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+    </div>
+  );
+}
+
+function ObsoletesTab() {
+  const [fiches, setFiches] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await apiGet('/admin/fiches-obsoletes');
+        setFiches(data);
+      } catch { setFiches([]); }
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  if (loading) return <p style={{ color: 'var(--text-muted)' }}>Chargement…</p>;
+  if (fiches.length === 0) return <div className="empty-state"><p>Aucune fiche obsolète.</p></div>;
+
+  return (
+    <div>
+      <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+        Fiches validées non mises à jour depuis plus de 12 mois.
+      </p>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Nom</th><th>Dernière mise à jour</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            {fiches.map((f) => (
+              <tr key={f.id}>
+                <td><a href={`/bibliotheque/${f.id}`} style={{ fontWeight: 500 }}>{f.nom_officiel}</a></td>
+                <td style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{new Date(f.updated_at).toLocaleDateString('fr-FR')}</td>
+                <td><a href={`/bibliotheque/${f.id}`} className="btn btn-ghost btn-sm">Voir</a></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ExportTab() {
+  const [downloading, setDownloading] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+
+  async function downloadCSV() {
+    setDownloading(true);
+    try {
+      const token = localStorage.getItem('access_token');
+      const apiUrl = import.meta.env.VITE_API_URL || '/api';
+      const res = await fetch(`${apiUrl}/admin/export/csv`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Erreur export');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'bibliotheques-export.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { /* ignore */ }
+    setDownloading(false);
+  }
+
+  async function generatePDF() {
+    setGeneratingPdf(true);
+    try {
+      const data = await apiGet('/bibliotheques?limit=100');
+      const fiches = data.bibliotheques || [];
+      const printWin = window.open('', '_blank');
+      if (!printWin) { setGeneratingPdf(false); return; }
+      const rows = fiches.map((f) =>
+        `<tr>
+          <td>${esc(f.nom_officiel)}</td>
+          <td>${esc(f.ville_nom || '')}</td>
+          <td>${esc(f.quartier || '')}</td>
+          <td>${esc(f.type || '')}</td>
+          <td>${esc(f.statut_fonctionnement || '')}</td>
+        </tr>`
+      ).join('');
+      printWin.document.write(`<!doctype html><html><head><meta charset="utf-8">
+        <title>Bibliofinder — Export</title>
+        <style>
+          body{font-family:system-ui,sans-serif;margin:20px;color:#222}
+          h1{font-size:18px;margin-bottom:4px}
+          p{font-size:12px;color:#666;margin-top:0}
+          table{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px}
+          th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}
+          th{background:#f5f5f5;font-weight:600}
+          @media print{body{margin:10mm}}
+        </style></head><body>
+        <h1>Bibliofinder — Répertoire des bibliothèques</h1>
+        <p>${fiches.length} fiche(s) · Exporté le ${new Date().toLocaleDateString('fr-FR')}</p>
+        <table><thead><tr><th>Nom</th><th>Ville</th><th>Quartier</th><th>Type</th><th>Statut</th></tr></thead>
+        <tbody>${rows}</tbody></table>
+        </body></html>`);
+      printWin.document.close();
+      printWin.focus();
+      setTimeout(() => { printWin.print(); }, 300);
+    } catch { /* ignore */ }
+    setGeneratingPdf(false);
+  }
+
+  function esc(s) {
+    if (!s) return '';
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  return (
+    <div>
+      <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+        Exportez l'ensemble des fiches au format CSV (compatible Excel, LibreOffice) ou PDF.
+      </p>
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+        <button className="btn btn-primary" onClick={downloadCSV} disabled={downloading}>
+          {downloading ? 'Téléchargement…' : 'Télécharger le CSV'}
+        </button>
+        <button className="btn btn-ghost" onClick={generatePDF} disabled={generatingPdf}>
+          {generatingPdf ? 'Génération…' : 'Générer un PDF'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const { isAdmin } = useAuth();
   const [tab, setTab] = useState('fiches');
@@ -364,10 +568,13 @@ export default function AdminDashboard() {
   }
 
   const tabs = [
-    { id: 'fiches', label: `Fiches en attente (${fiches.length})` },
+    { id: 'fiches', label: `Fiches (${fiches.length})` },
     { id: 'avis', label: `Avis (${pendingAvis.length})` },
+    { id: 'signalements', label: 'Signalements' },
+    { id: 'obsoletes', label: 'Obsolètes' },
     { id: 'utilisateurs', label: 'Utilisateurs' },
     { id: 'images', label: 'Images' },
+    { id: 'export', label: 'Export' },
   ];
 
   return (
@@ -397,7 +604,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <div className="tabs">
+      <div className="tabs" style={{ flexWrap: 'wrap' }}>
         {tabs.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`tab ${tab === t.id ? 'tab-active' : ''}`}>
@@ -408,8 +615,11 @@ export default function AdminDashboard() {
 
       {tab === 'fiches' && <PendingFiches fiches={fiches} onAction={loadData} />}
       {tab === 'avis' && <PendingAvis avis={pendingAvis} onAction={loadData} />}
+      {tab === 'signalements' && <SignalementsTab />}
+      {tab === 'obsoletes' && <ObsoletesTab />}
       {tab === 'utilisateurs' && <UsersTable users={users} onUpdate={loadData} />}
       {tab === 'images' && <ImageManager />}
+      {tab === 'export' && <ExportTab />}
     </main>
   );
 }

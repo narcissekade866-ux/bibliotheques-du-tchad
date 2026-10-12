@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiGet } from '../services/api';
+import { useLightMode } from '../contexts/LightModeContext';
 import SearchBar from '../components/SearchBar';
 import MapView from '../components/MapView';
 import BiblioCard from '../components/BiblioCard';
@@ -37,6 +38,8 @@ export default function Home() {
     navigate(`/bibliotheque/${biblio.id}`);
   }
 
+  const { lightMode } = useLightMode();
+
   const center = ville
     ? [parseFloat(ville.centre_lat), parseFloat(ville.centre_long)]
     : [12.1048, 15.0445];
@@ -62,18 +65,20 @@ export default function Home() {
         </div>
       </section>
 
-      <section style={{ height: '50vh', minHeight: '300px' }}>
-        {loading ? (
-          <div className="skeleton" style={{ height: '100%' }} />
-        ) : (
-          <MapView
-            bibliotheques={bibliotheques}
-            center={center}
-            zoom={zoom}
-            onMarkerClick={handleMarkerClick}
-          />
-        )}
-      </section>
+      {!lightMode && (
+        <section style={{ height: '50vh', minHeight: '300px' }}>
+          {loading ? (
+            <div className="skeleton" style={{ height: '100%' }} />
+          ) : (
+            <MapView
+              bibliotheques={bibliotheques}
+              center={center}
+              zoom={zoom}
+              onMarkerClick={handleMarkerClick}
+            />
+          )}
+        </section>
+      )}
 
       {bibliotheques.length > 0 && (
         <section className="container" style={{ padding: '32px 16px' }}>
