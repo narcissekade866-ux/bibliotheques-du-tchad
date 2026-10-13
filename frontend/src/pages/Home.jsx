@@ -66,7 +66,7 @@ export default function Home() {
       </section>
 
       {!lightMode && (
-        <section style={{ height: '50vh', minHeight: '300px' }}>
+        <section style={{ height: '45vh', minHeight: '280px' }}>
           {loading ? (
             <div className="skeleton" style={{ height: '100%', borderRadius: 0 }} />
           ) : (
@@ -81,8 +81,8 @@ export default function Home() {
       )}
 
       {bibliotheques.length > 0 && (
-        <section className="container" style={{ padding: '36px 16px 40px' }}>
-          <h2 style={{ margin: '0 0 20px' }}>
+        <section className="container" style={{ padding: '28px 16px 36px' }}>
+          <h2 style={{ margin: '0 0 16px' }}>
             Dernières bibliothèques ajoutées
           </h2>
           <div className="grid grid-cards">

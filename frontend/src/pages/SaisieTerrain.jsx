@@ -406,12 +406,15 @@ export default function SaisieTerrain() {
   const secIdx = SECTIONS.findIndex(s => s.id === activeSection);
 
   return (
-    <main className="container" style={{ padding:'28px 16px', flex:1, maxWidth:'700px' }}>
+    <main className="container" style={{ padding:'28px 16px', flex:1, maxWidth:'1040px' }}>
       <h1 style={{ fontSize:'22px', fontWeight:700, marginBottom:'4px' }}>Collecte terrain</h1>
       <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'16px' }}>
-        <span style={{ width:'10px', height:'10px', borderRadius:'50%', background: online ? '#27ae60' : '#e74c3c', display:'inline-block' }} />
+        <span style={{ width:'10px', height:'10px', borderRadius:'50%', background: online ? 'var(--success)' : 'var(--danger)', display:'inline-block' }} />
         <span style={{ fontSize:'13px', color:'var(--text-muted)' }}>
           {online ? 'En ligne' : 'Hors-ligne — sauvegarde locale'}
+        </span>
+        <span style={{ marginLeft:'auto', fontSize:'13px', color:'var(--text-muted)' }}>
+          Section {secIdx + 1} / {SECTIONS.length}
         </span>
       </div>
 
@@ -430,24 +433,36 @@ export default function SaisieTerrain() {
 
       {tab === 'form' && (
         <form onSubmit={handleSubmit}>
-          <div style={{ display:'flex', gap:'6px', flexWrap:'wrap', marginBottom:'24px' }}>
-            {SECTIONS.map((s) => (
-              <button key={s.id} type="button"
-                className={activeSection === s.id ? 'badge badge-primary' : 'badge badge-neutral'}
-                style={{ cursor:'pointer', padding:'5px 12px', fontSize:'12px', fontWeight: activeSection === s.id ? 600 : 400 }}
-                onClick={() => setActiveSection(s.id)}>
-                {s.label}
-              </button>
-            ))}
+          <div className="form-nav">
+            <div className="form-nav-bar">
+              {SECTIONS.map((s, i) => (
+                <button key={s.id} type="button"
+                  className={`form-nav-dot${activeSection === s.id ? ' form-nav-dot-active' : i < secIdx ? ' form-nav-dot-done' : ''}`}
+                  onClick={() => setActiveSection(s.id)}
+                  title={s.label}
+                  aria-label={s.label}>
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+            <div className="form-nav-select">
+              <select value={activeSection} onChange={e => setActiveSection(e.target.value)}>
+                {SECTIONS.map((s, i) => (
+                  <option key={s.id} value={s.id}>{i + 1}. {s.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {activeSection === 'repondant' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
               <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>A — Informations sur le répondant</legend>
-              <label>Nom du répondant <input type="text" value={form.enquete_repondant_nom} onChange={e => set('enquete_repondant_nom', e.target.value)} /></label>
-              <label>Fonction <input type="text" value={form.enquete_repondant_fonction} onChange={e => set('enquete_repondant_fonction', e.target.value)} /></label>
-              <label>Contact <input type="text" value={form.enquete_repondant_contact} onChange={e => set('enquete_repondant_contact', e.target.value)} /></label>
-              <label style={{ display:'flex', alignItems:'center', gap:'8px', cursor:'pointer' }}>
+              <div className="form-grid">
+                <label>Nom du répondant <input type="text" value={form.enquete_repondant_nom} onChange={e => set('enquete_repondant_nom', e.target.value)} /></label>
+                <label>Fonction <input type="text" value={form.enquete_repondant_fonction} onChange={e => set('enquete_repondant_fonction', e.target.value)} /></label>
+                <label className="form-grid-full">Contact <input type="text" value={form.enquete_repondant_contact} onChange={e => set('enquete_repondant_contact', e.target.value)} /></label>
+              </div>
+              <label style={{ display:'flex', alignItems:'center', gap:'8px', cursor:'pointer', marginTop:'12px' }}>
                 <input type="checkbox" checked={form.consentement_utilisation} onChange={e => set('consentement_utilisation', e.target.checked)} style={{ width:'auto' }} />
                 Consentement à l'utilisation des données
               </label>
@@ -457,21 +472,23 @@ export default function SaisieTerrain() {
           {activeSection === 'identification' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
               <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>B — Identification</legend>
-              <label>Nom officiel * <input type="text" value={form.nom_officiel} onChange={e => set('nom_officiel', e.target.value)} required /></label>
-              <label>Nom alternatif <input type="text" value={form.nom_alternatif} onChange={e => set('nom_alternatif', e.target.value)} /></label>
-              <Select3 label="Type de bibliothèque" value={form.type} onChange={v => set('type', v)} options={TYPES_BIBLIO} />
-              <label>Année de création <input type="number" min="1800" max="2100" value={form.annee_creation} onChange={e => set('annee_creation', e.target.value)} /></label>
-              <label>Responsable / institution de tutelle <input type="text" value={form.responsable_institution} onChange={e => set('responsable_institution', e.target.value)} /></label>
-              <label>Statut de fonctionnement
-                <select value={form.statut_fonctionnement} onChange={e => set('statut_fonctionnement', e.target.value)}>
-                  <option value="fonctionnel">En fonctionnement</option>
-                  <option value="temporairement_ferme">Temporairement fermé</option>
-                  <option value="non_fonctionnel">Non fonctionnel</option>
-                </select>
-              </label>
-              {form.statut_fonctionnement !== 'fonctionnel' && (
-                <label>Raison <input type="text" value={form.raison_non_fonctionnel} onChange={e => set('raison_non_fonctionnel', e.target.value)} /></label>
-              )}
+              <div className="form-grid">
+                <label className="form-grid-full">Nom officiel * <input type="text" value={form.nom_officiel} onChange={e => set('nom_officiel', e.target.value)} required /></label>
+                <label className="form-grid-full">Nom alternatif <input type="text" value={form.nom_alternatif} onChange={e => set('nom_alternatif', e.target.value)} /></label>
+                <Select3 label="Type de bibliothèque" value={form.type} onChange={v => set('type', v)} options={TYPES_BIBLIO} />
+                <label>Année de création <input type="number" min="1800" max="2100" value={form.annee_creation} onChange={e => set('annee_creation', e.target.value)} /></label>
+                <label className="form-grid-full">Responsable / institution de tutelle <input type="text" value={form.responsable_institution} onChange={e => set('responsable_institution', e.target.value)} /></label>
+                <label>Statut de fonctionnement
+                  <select value={form.statut_fonctionnement} onChange={e => set('statut_fonctionnement', e.target.value)}>
+                    <option value="fonctionnel">En fonctionnement</option>
+                    <option value="temporairement_ferme">Temporairement fermé</option>
+                    <option value="non_fonctionnel">Non fonctionnel</option>
+                  </select>
+                </label>
+                {form.statut_fonctionnement !== 'fonctionnel' && (
+                  <label>Raison <input type="text" value={form.raison_non_fonctionnel} onChange={e => set('raison_non_fonctionnel', e.target.value)} /></label>
+                )}
+              </div>
             </fieldset>
           )}
 
@@ -521,50 +538,58 @@ export default function SaisieTerrain() {
           {activeSection === 'acces' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
               <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>E — Conditions d'accès</legend>
-              <Select3 label="Accès gratuit" value={form.acces_gratuit} onChange={v => set('acces_gratuit', v)} options={OUI_NON_PARTIEL} />
-              <label>Montant par visite (FCFA) <input type="number" min="0" value={form.montant_par_visite} onChange={e => set('montant_par_visite', e.target.value)} /></label>
-              <label>Abonnement mensuel (FCFA) <input type="number" min="0" value={form.abonnement_mensuel} onChange={e => set('abonnement_mensuel', e.target.value)} /></label>
-              <label>Conditions d'inscription (séparées par virgule) <input type="text" value={form.conditions_inscription} onChange={e => set('conditions_inscription', e.target.value)} placeholder="ex: Carte d'identité, Photo" /></label>
-              <Select3 label="Consultation sans inscription" value={form.consultation_sans_inscription} onChange={v => set('consultation_sans_inscription', v)} options={OUI_NON_PARTIEL} />
-              <label>Conditions élèves/étudiants <input type="text" value={form.conditions_eleves_etudiants} onChange={e => set('conditions_eleves_etudiants', e.target.value)} /></label>
-              <label>Modes de paiement (séparés par virgule) <input type="text" value={form.modes_paiement} onChange={e => set('modes_paiement', e.target.value)} placeholder="ex: Espèces, Mobile Money" /></label>
+              <div className="form-grid">
+                <Select3 label="Accès gratuit" value={form.acces_gratuit} onChange={v => set('acces_gratuit', v)} options={OUI_NON_PARTIEL} />
+                <Select3 label="Consultation sans inscription" value={form.consultation_sans_inscription} onChange={v => set('consultation_sans_inscription', v)} options={OUI_NON_PARTIEL} />
+                <label>Montant par visite (FCFA) <input type="number" min="0" value={form.montant_par_visite} onChange={e => set('montant_par_visite', e.target.value)} /></label>
+                <label>Abonnement mensuel (FCFA) <input type="number" min="0" value={form.abonnement_mensuel} onChange={e => set('abonnement_mensuel', e.target.value)} /></label>
+                <label className="form-grid-full">Conditions d'inscription (séparées par virgule) <input type="text" value={form.conditions_inscription} onChange={e => set('conditions_inscription', e.target.value)} placeholder="ex: Carte d'identité, Photo" /></label>
+                <label>Conditions élèves/étudiants <input type="text" value={form.conditions_eleves_etudiants} onChange={e => set('conditions_eleves_etudiants', e.target.value)} /></label>
+                <label>Modes de paiement (séparés par virgule) <input type="text" value={form.modes_paiement} onChange={e => set('modes_paiement', e.target.value)} placeholder="ex: Espèces, Mobile Money" /></label>
+              </div>
             </fieldset>
           )}
 
           {activeSection === 'pret' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
               <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>F — Prêt et consultation</legend>
-              <label style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+              <label style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px' }}>
                 <input type="checkbox" checked={form.lecture_sur_place} onChange={e => set('lecture_sur_place', e.target.checked)} style={{ width:'auto' }} />
                 Lecture sur place possible
               </label>
-              <Select3 label="Emprunt à domicile" value={form.emprunt_domicile} onChange={v => set('emprunt_domicile', v)} options={OUI_NON_PARTIEL} />
-              <label>Nombre max de livres empruntables <input type="number" min="0" value={form.nb_max_livres_empruntables} onChange={e => set('nb_max_livres_empruntables', e.target.value)} /></label>
-              <label>Durée max du prêt <input type="text" value={form.duree_max_pret} onChange={e => set('duree_max_pret', e.target.value)} placeholder="ex: 15 jours" /></label>
-              <label>Pénalités de retard <input type="text" value={form.penalites_retard} onChange={e => set('penalites_retard', e.target.value)} /></label>
-              <label>Système de suivi des prêts <input type="text" value={form.systeme_suivi_prets} onChange={e => set('systeme_suivi_prets', e.target.value)} placeholder="ex: Registre, Logiciel" /></label>
+              <div className="form-grid">
+                <Select3 label="Emprunt à domicile" value={form.emprunt_domicile} onChange={v => set('emprunt_domicile', v)} options={OUI_NON_PARTIEL} />
+                <label>Nombre max de livres empruntables <input type="number" min="0" value={form.nb_max_livres_empruntables} onChange={e => set('nb_max_livres_empruntables', e.target.value)} /></label>
+                <label>Durée max du prêt <input type="text" value={form.duree_max_pret} onChange={e => set('duree_max_pret', e.target.value)} placeholder="ex: 15 jours" /></label>
+                <label>Pénalités de retard <input type="text" value={form.penalites_retard} onChange={e => set('penalites_retard', e.target.value)} /></label>
+                <label className="form-grid-full">Système de suivi des prêts <input type="text" value={form.systeme_suivi_prets} onChange={e => set('systeme_suivi_prets', e.target.value)} placeholder="ex: Registre, Logiciel" /></label>
+              </div>
             </fieldset>
           )}
 
           {activeSection === 'public' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
               <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>G — Public et fréquentation</legend>
-              <label>Public cible (séparé par virgule) <input type="text" value={form.public_cible} onChange={e => set('public_cible', e.target.value)} placeholder="ex: Étudiants, Chercheurs, Grand public" /></label>
-              <label>Fréquentation moyenne / jour <input type="number" min="0" value={form.frequentation_moyenne_jour} onChange={e => set('frequentation_moyenne_jour', e.target.value)} /></label>
-              <label>Fréquentation moyenne / semaine <input type="number" min="0" value={form.frequentation_moyenne_semaine} onChange={e => set('frequentation_moyenne_semaine', e.target.value)} /></label>
-              <Select3 label="Accessible aux personnes handicapées" value={form.accessible_handicap} onChange={v => set('accessible_handicap', v)} options={OUI_NON_PARTIEL} />
+              <div className="form-grid">
+                <label className="form-grid-full">Public cible (séparé par virgule) <input type="text" value={form.public_cible} onChange={e => set('public_cible', e.target.value)} placeholder="ex: Étudiants, Chercheurs, Grand public" /></label>
+                <label>Fréquentation moyenne / jour <input type="number" min="0" value={form.frequentation_moyenne_jour} onChange={e => set('frequentation_moyenne_jour', e.target.value)} /></label>
+                <label>Fréquentation moyenne / semaine <input type="number" min="0" value={form.frequentation_moyenne_semaine} onChange={e => set('frequentation_moyenne_semaine', e.target.value)} /></label>
+                <Select3 label="Accessible aux personnes handicapées" value={form.accessible_handicap} onChange={v => set('accessible_handicap', v)} options={OUI_NON_PARTIEL} />
+              </div>
             </fieldset>
           )}
 
           {activeSection === 'collection' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
               <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>H/I — Collections et catalogue</legend>
-              <label>Nombre de livres (estimation) <input type="number" min="0" value={form.nb_livres_estime} onChange={e => set('nb_livres_estime', e.target.value)} /></label>
-              <label>Domaines couverts (séparés par virgule) <input type="text" value={form.domaines_couverts} onChange={e => set('domaines_couverts', e.target.value)} placeholder="ex: Sciences, Littérature, Droit" /></label>
-              <label>Langues disponibles (séparées par virgule) <input type="text" value={form.langues_disponibles} onChange={e => set('langues_disponibles', e.target.value)} placeholder="ex: Français, Arabe, Anglais" /></label>
-              <label>État des livres <input type="text" value={form.etat_des_livres} onChange={e => set('etat_des_livres', e.target.value)} placeholder="ex: Bon, Moyen, Mauvais" /></label>
-              <Select3 label="Accepte les dons" value={form.accepte_dons} onChange={v => set('accepte_dons', v)} options={OUI_NON_PARTIEL} />
-              <label>Logiciel de gestion <input type="text" value={form.logiciel_gestion} onChange={e => set('logiciel_gestion', e.target.value)} /></label>
+              <div className="form-grid">
+                <label>Nombre de livres (estimation) <input type="number" min="0" value={form.nb_livres_estime} onChange={e => set('nb_livres_estime', e.target.value)} /></label>
+                <label>État des livres <input type="text" value={form.etat_des_livres} onChange={e => set('etat_des_livres', e.target.value)} placeholder="ex: Bon, Moyen, Mauvais" /></label>
+                <label className="form-grid-full">Domaines couverts (séparés par virgule) <input type="text" value={form.domaines_couverts} onChange={e => set('domaines_couverts', e.target.value)} placeholder="ex: Sciences, Littérature, Droit" /></label>
+                <label className="form-grid-full">Langues disponibles (séparées par virgule) <input type="text" value={form.langues_disponibles} onChange={e => set('langues_disponibles', e.target.value)} placeholder="ex: Français, Arabe, Anglais" /></label>
+                <Select3 label="Accepte les dons" value={form.accepte_dons} onChange={v => set('accepte_dons', v)} options={OUI_NON_PARTIEL} />
+                <label>Logiciel de gestion <input type="text" value={form.logiciel_gestion} onChange={e => set('logiciel_gestion', e.target.value)} /></label>
+              </div>
             </fieldset>
           )}
 
@@ -622,11 +647,13 @@ export default function SaisieTerrain() {
           {activeSection === 'communication' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
               <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>N — Communication</legend>
-              <label>Site web <input type="url" value={form.site_web} onChange={e => set('site_web', e.target.value)} /></label>
-              <label>WhatsApp public <input type="text" value={form.whatsapp_public} onChange={e => set('whatsapp_public', e.target.value)} /></label>
-              <label>Email public <input type="email" value={form.email_public} onChange={e => set('email_public', e.target.value)} /></label>
-              <label>Réseaux sociaux (séparés par virgule) <input type="text" value={form.reseaux_sociaux} onChange={e => set('reseaux_sociaux', e.target.value)} placeholder="ex: Facebook, Twitter" /></label>
-              <Select3 label="Intéressé par une fiche numérique" value={form.interesse_fiche_numerique} onChange={v => set('interesse_fiche_numerique', v)} options={OUI_NON_PARTIEL} />
+              <div className="form-grid">
+                <label>Site web <input type="url" value={form.site_web} onChange={e => set('site_web', e.target.value)} /></label>
+                <label>Email public <input type="email" value={form.email_public} onChange={e => set('email_public', e.target.value)} /></label>
+                <label>WhatsApp public <input type="text" value={form.whatsapp_public} onChange={e => set('whatsapp_public', e.target.value)} /></label>
+                <Select3 label="Intéressé par une fiche numérique" value={form.interesse_fiche_numerique} onChange={v => set('interesse_fiche_numerique', v)} options={OUI_NON_PARTIEL} />
+                <label className="form-grid-full">Réseaux sociaux (séparés par virgule) <input type="text" value={form.reseaux_sociaux} onChange={e => set('reseaux_sociaux', e.target.value)} placeholder="ex: Facebook, Twitter" /></label>
+              </div>
             </fieldset>
           )}
 
@@ -686,7 +713,11 @@ export default function SaisieTerrain() {
             </div>
           )}
           {drafts.length === 0 ? (
-            <div className="empty-state"><p>Aucun brouillon en attente.</p></div>
+            <div className="empty-state">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <p className="empty-state-title">Aucun brouillon</p>
+              <p>Les fiches sauvegardées hors-ligne apparaîtront ici.</p>
+            </div>
           ) : (
             <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
               {drafts.map(d => (

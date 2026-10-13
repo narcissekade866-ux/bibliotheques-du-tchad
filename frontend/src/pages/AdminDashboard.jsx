@@ -30,7 +30,13 @@ function PendingFiches({ fiches, onAction }) {
   }
 
   if (fiches.length === 0) {
-    return <div className="empty-state"><p>Aucune fiche en attente de validation.</p></div>;
+    return (
+      <div className="empty-state">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+        <p className="empty-state-title">Tout est à jour</p>
+        <p>Aucune fiche en attente de validation. Les nouvelles soumissions apparaîtront ici.</p>
+      </div>
+    );
   }
 
   return (
@@ -99,7 +105,13 @@ function PendingAvis({ avis, onAction }) {
   }
 
   if (avis.length === 0) {
-    return <div className="empty-state"><p>Aucun avis en attente de modération.</p></div>;
+    return (
+      <div className="empty-state">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        <p className="empty-state-title">Aucun avis à modérer</p>
+        <p>Les nouveaux avis des utilisateurs apparaîtront ici pour modération.</p>
+      </div>
+    );
   }
 
   return (
@@ -371,7 +383,13 @@ function SignalementsTab() {
       </div>
       {feedback && <div className="alert alert-success" style={{ marginBottom: '12px' }}>{feedback}</div>}
       {loading ? <p style={{ color: 'var(--text-muted)' }}>Chargement…</p> :
-        signalements.length === 0 ? <div className="empty-state"><p>Aucun signalement.</p></div> : (
+        signalements.length === 0 ? (
+          <div className="empty-state">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            <p className="empty-state-title">Aucun signalement</p>
+            <p>Les signalements d'informations incorrectes apparaîtront ici.</p>
+          </div>
+        ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {signalements.map((s) => (
               <div key={s.id} className="card">
@@ -419,7 +437,13 @@ function ObsoletesTab() {
   }, []);
 
   if (loading) return <p style={{ color: 'var(--text-muted)' }}>Chargement…</p>;
-  if (fiches.length === 0) return <div className="empty-state"><p>Aucune fiche obsolète.</p></div>;
+  if (fiches.length === 0) return (
+    <div className="empty-state">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <p className="empty-state-title">Toutes les fiches sont à jour</p>
+      <p>Aucune fiche validée n'a dépassé 12 mois sans mise à jour.</p>
+    </div>
+  );
 
   return (
     <div>

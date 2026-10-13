@@ -81,8 +81,8 @@ export default function Search() {
 
       <div className="search-controls">
         <SearchBar onSearch={handleSearch} initialQuery={q} />
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <select value={type} onChange={handleTypeChange} style={{ minWidth: '150px', width: 'auto' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <select value={type} onChange={handleTypeChange} style={{ flex: '1 1 140px', minWidth: '140px', width: 'auto' }}>
             <option value="">Tous les types</option>
             <option value="publique">Publique</option>
             <option value="universitaire">Universitaire</option>
@@ -92,14 +92,14 @@ export default function Search() {
             <option value="privee">Privée</option>
             <option value="associative">Associative</option>
           </select>
-          <select value={statut} onChange={handleStatutChange} style={{ minWidth: '150px', width: 'auto' }}>
+          <select value={statut} onChange={handleStatutChange} style={{ flex: '1 1 140px', minWidth: '140px', width: 'auto' }}>
             <option value="">Tous les statuts</option>
             <option value="fonctionnel">En fonctionnement</option>
             <option value="partiellement_fonctionnel">Partiellement fonctionnel</option>
             <option value="non_fonctionnel">Non fonctionnel</option>
             <option value="temporairement_ferme">Temporairement fermé</option>
           </select>
-          <div className="toggle-group">
+          <div className="toggle-group" style={{ flexShrink: 0 }}>
             <button className={`toggle-btn ${view === 'list' ? 'toggle-active' : ''}`}
               onClick={() => setView('list')}>Liste</button>
             <button className={`toggle-btn ${view === 'map' ? 'toggle-active' : ''}`}
@@ -123,8 +123,10 @@ export default function Search() {
 
       {!loading && bibliotheques.length === 0 && (
         <div className="empty-state">
-          <p>Aucune bibliothèque trouvée.</p>
-          {q && <p style={{ fontSize: '14px' }}>Essayez avec d'autres termes de recherche.</p>}
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <p className="empty-state-title">Aucune bibliothèque trouvée</p>
+          {q ? <p>Essayez avec d'autres termes ou modifiez les filtres.</p>
+            : <p>Modifiez vos critères de recherche.</p>}
         </div>
       )}
 
@@ -137,7 +139,7 @@ export default function Search() {
       )}
 
       {!loading && view === 'map' && bibliotheques.length > 0 && (
-        <div className="map-container" style={{ height: '60vh', minHeight: '400px' }}>
+        <div className="map-container" style={{ height: '60vh', minHeight: '350px' }}>
           <MapView
             bibliotheques={bibliotheques}
             onMarkerClick={(b) => navigate(`/bibliotheque/${b.id}`)}
@@ -149,7 +151,7 @@ export default function Search() {
         <div className="pagination">
           {page > 1 && (
             <button className="btn btn-secondary btn-sm"
-              onClick={() => setSearchParams({ q, ...(type && { type }), page: page - 1 })}>
+              onClick={() => setSearchParams(buildParams({ page: page - 1 }))}>
               Précédent
             </button>
           )}
@@ -158,7 +160,7 @@ export default function Search() {
           </span>
           {page < pagination.pages && (
             <button className="btn btn-secondary btn-sm"
-              onClick={() => setSearchParams({ q, ...(type && { type }), page: page + 1 })}>
+              onClick={() => setSearchParams(buildParams({ page: page + 1 }))}>
               Suivant
             </button>
           )}

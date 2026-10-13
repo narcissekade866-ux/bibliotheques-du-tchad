@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { LightModeProvider } from './contexts/LightModeContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -18,22 +19,24 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <LightModeProvider>
-          <Header />
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/recherche" element={<Search />} />
-            <Route path="/bibliotheque/:id" element={<BiblioDetail />} />
-            <Route path="/bibliotheque/:id/modifier" element={<EditFiche />} />
-            <Route path="/connexion" element={<Login />} />
-            <Route path="/inscription" element={<Register />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/mon-espace" element={<MonEspace />} />
-            <Route path="/saisie-terrain" element={<SaisieTerrain />} />
-            <Route path="/statistiques" element={<Stats />} />
-          </Routes>
-          <Footer />
-        </LightModeProvider>
+        <ThemeProvider>
+          <LightModeProvider>
+            <Header />
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/recherche" element={<Search />} />
+              <Route path="/bibliotheque/:id" element={<BiblioDetail />} />
+              <Route path="/bibliotheque/:id/modifier" element={<EditFiche />} />
+              <Route path="/connexion" element={<Login />} />
+              <Route path="/inscription" element={<Register />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/mon-espace" element={<MonEspace />} />
+              <Route path="/saisie-terrain" element={<SaisieTerrain />} />
+              <Route path="/statistiques" element={<Stats />} />
+            </Routes>
+            <Footer />
+          </LightModeProvider>
+        </ThemeProvider>
       </AuthProvider>
     </BrowserRouter>
   );
