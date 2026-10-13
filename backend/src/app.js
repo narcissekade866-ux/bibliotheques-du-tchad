@@ -23,6 +23,8 @@ const allowedOrigins = (process.env.CORS_ORIGIN || '')
 
 const app = express();
 
+app.set('trust proxy', 2);
+
 app.use(helmet());
 app.use(
   cors({
