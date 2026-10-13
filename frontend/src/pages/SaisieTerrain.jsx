@@ -18,20 +18,29 @@ const OUI_NON_PARTIEL = [{ v:'oui', l:'Oui'}, { v:'non', l:'Non'}, { v:'partiel'
 const OUI_NON_PARFOIS = [{ v:'oui', l:'Oui'}, { v:'non', l:'Non'}, { v:'parfois', l:'Parfois'}];
 
 const SECTIONS = [
-  { id:'repondant', label:'A — Répondant' },
-  { id:'identification', label:'B — Identification' },
-  { id:'localisation', label:'C — Localisation & GPS' },
-  { id:'horaires', label:'D — Horaires' },
-  { id:'acces', label:'E — Conditions d\'accès' },
-  { id:'pret', label:'F — Prêt et consultation' },
-  { id:'public', label:'G — Public et fréquentation' },
-  { id:'collection', label:'H/I — Collections et catalogue' },
-  { id:'services', label:'J — Services' },
-  { id:'activites', label:'K — Activités' },
-  { id:'infrastructure', label:'M — Infrastructure' },
-  { id:'communication', label:'N — Communication' },
-  { id:'besoins', label:'O — Besoins et partenariats' },
+  { id:'repondant', code:'A', title:'Informations sur le répondant' },
+  { id:'identification', code:'B', title:'Identification de la bibliothèque' },
+  { id:'localisation', code:'C', title:'Localisation et GPS' },
+  { id:'horaires', code:'D', title:'Horaires d’ouverture' },
+  { id:'acces', code:'E', title:'Conditions d’accès' },
+  { id:'pret', code:'F', title:'Prêt et consultation' },
+  { id:'public', code:'G', title:'Public et fréquentation' },
+  { id:'collection', code:'H/I', title:'Collections et catalogue' },
+  { id:'services', code:'J', title:'Services proposés' },
+  { id:'activites', code:'K', title:'Activités culturelles' },
+  { id:'infrastructure', code:'M', title:'Infrastructure et bâtiment' },
+  { id:'communication', code:'N', title:'Communication et présence en ligne' },
+  { id:'besoins', code:'O', title:'Besoins et partenariats' },
 ];
+
+function SectionHeading({ code, title }) {
+  return (
+    <div className="section-heading">
+      <span className="section-heading-badge">{code}</span>
+      <span className="section-heading-title">{title}</span>
+    </div>
+  );
+}
 
 function emptyForm() {
   const horaires = {};
@@ -439,8 +448,8 @@ export default function SaisieTerrain() {
                 <button key={s.id} type="button"
                   className={`form-nav-dot${activeSection === s.id ? ' form-nav-dot-active' : i < secIdx ? ' form-nav-dot-done' : ''}`}
                   onClick={() => setActiveSection(s.id)}
-                  title={s.label}
-                  aria-label={s.label}>
+                  title={`[${s.code}] ${s.title}`}
+                  aria-label={`Section ${s.code} : ${s.title}`}>
                   {i + 1}
                 </button>
               ))}
@@ -448,7 +457,7 @@ export default function SaisieTerrain() {
             <div className="form-nav-select">
               <select value={activeSection} onChange={e => setActiveSection(e.target.value)}>
                 {SECTIONS.map((s, i) => (
-                  <option key={s.id} value={s.id}>{i + 1}. {s.label}</option>
+                  <option key={s.id} value={s.id}>{i + 1}. [{s.code}] {s.title}</option>
                 ))}
               </select>
             </div>
@@ -456,7 +465,7 @@ export default function SaisieTerrain() {
 
           {activeSection === 'repondant' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
-              <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>A — Informations sur le répondant</legend>
+              <SectionHeading code="A" title="Informations sur le répondant" />
               <div className="form-grid">
                 <label>Nom du répondant <input type="text" value={form.enquete_repondant_nom} onChange={e => set('enquete_repondant_nom', e.target.value)} /></label>
                 <label>Fonction <input type="text" value={form.enquete_repondant_fonction} onChange={e => set('enquete_repondant_fonction', e.target.value)} /></label>
@@ -471,7 +480,7 @@ export default function SaisieTerrain() {
 
           {activeSection === 'identification' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
-              <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>B — Identification</legend>
+              <SectionHeading code="B" title="Identification de la bibliothèque" />
               <div className="form-grid">
                 <label className="form-grid-full">Nom officiel * <input type="text" value={form.nom_officiel} onChange={e => set('nom_officiel', e.target.value)} required /></label>
                 <label className="form-grid-full">Nom alternatif <input type="text" value={form.nom_alternatif} onChange={e => set('nom_alternatif', e.target.value)} /></label>
@@ -494,7 +503,7 @@ export default function SaisieTerrain() {
 
           {activeSection === 'localisation' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
-              <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>C — Localisation géographique</legend>
+              <SectionHeading code="C" title="Localisation et GPS" />
               <label>Ville
                 <select value={form.ville_id} onChange={e => set('ville_id', e.target.value)}>
                   <option value="">— Sélectionner —</option>
@@ -517,7 +526,7 @@ export default function SaisieTerrain() {
 
           {activeSection === 'horaires' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
-              <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>D — Horaires d'ouverture</legend>
+              <SectionHeading code="D" title="Horaires d'ouverture" />
               {JOURS.map(j => (
                 <div key={j} style={{ display:'flex', gap:'10px', alignItems:'center', marginBottom:'8px' }}>
                   <span style={{ width:'90px', fontSize:'14px', fontWeight:500 }}>{JOUR_LABELS[j]}</span>
@@ -537,7 +546,7 @@ export default function SaisieTerrain() {
 
           {activeSection === 'acces' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
-              <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>E — Conditions d'accès</legend>
+              <SectionHeading code="E" title="Conditions d'accès" />
               <div className="form-grid">
                 <Select3 label="Accès gratuit" value={form.acces_gratuit} onChange={v => set('acces_gratuit', v)} options={OUI_NON_PARTIEL} />
                 <Select3 label="Consultation sans inscription" value={form.consultation_sans_inscription} onChange={v => set('consultation_sans_inscription', v)} options={OUI_NON_PARTIEL} />
@@ -552,7 +561,7 @@ export default function SaisieTerrain() {
 
           {activeSection === 'pret' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
-              <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>F — Prêt et consultation</legend>
+              <SectionHeading code="F" title="Prêt et consultation" />
               <label style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px' }}>
                 <input type="checkbox" checked={form.lecture_sur_place} onChange={e => set('lecture_sur_place', e.target.checked)} style={{ width:'auto' }} />
                 Lecture sur place possible
@@ -569,7 +578,7 @@ export default function SaisieTerrain() {
 
           {activeSection === 'public' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
-              <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>G — Public et fréquentation</legend>
+              <SectionHeading code="G" title="Public et fréquentation" />
               <div className="form-grid">
                 <label className="form-grid-full">Public cible (séparé par virgule) <input type="text" value={form.public_cible} onChange={e => set('public_cible', e.target.value)} placeholder="ex: Étudiants, Chercheurs, Grand public" /></label>
                 <label>Fréquentation moyenne / jour <input type="number" min="0" value={form.frequentation_moyenne_jour} onChange={e => set('frequentation_moyenne_jour', e.target.value)} /></label>
@@ -581,7 +590,7 @@ export default function SaisieTerrain() {
 
           {activeSection === 'collection' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
-              <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>H/I — Collections et catalogue</legend>
+              <SectionHeading code="H/I" title="Collections et catalogue" />
               <div className="form-grid">
                 <label>Nombre de livres (estimation) <input type="number" min="0" value={form.nb_livres_estime} onChange={e => set('nb_livres_estime', e.target.value)} /></label>
                 <label>État des livres <input type="text" value={form.etat_des_livres} onChange={e => set('etat_des_livres', e.target.value)} placeholder="ex: Bon, Moyen, Mauvais" /></label>
@@ -595,7 +604,7 @@ export default function SaisieTerrain() {
 
           {activeSection === 'services' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
-              <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>J — Services</legend>
+              <SectionHeading code="J" title="Services proposés" />
               <label style={{ display:'flex', alignItems:'center', gap:'8px' }}>
                 <input type="checkbox" checked={form.salle_lecture} onChange={e => set('salle_lecture', e.target.checked)} style={{ width:'auto' }} />
                 Salle de lecture
@@ -620,7 +629,7 @@ export default function SaisieTerrain() {
 
           {activeSection === 'activites' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
-              <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>K — Activités</legend>
+              <SectionHeading code="K" title="Activités culturelles" />
               <label style={{ display:'flex', alignItems:'center', gap:'8px' }}>
                 <input type="checkbox" checked={form.organise_activites} onChange={e => set('organise_activites', e.target.checked)} style={{ width:'auto' }} />
                 Organise des activités culturelles
@@ -637,7 +646,7 @@ export default function SaisieTerrain() {
 
           {activeSection === 'infrastructure' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
-              <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>M — Infrastructure</legend>
+              <SectionHeading code="M" title="Infrastructure et bâtiment" />
               <label>Problèmes matériels (séparés par virgule) <input type="text" value={form.problemes_materiels} onChange={e => set('problemes_materiels', e.target.value)} placeholder="ex: Toiture, Électricité, Mobilier" /></label>
               <Select3 label="Besoin de réhabilitation" value={form.besoin_rehabilitation} onChange={v => set('besoin_rehabilitation', v)} options={OUI_NON_PARTIEL} />
               <label>Types de travaux nécessaires <textarea rows={2} value={form.types_travaux} onChange={e => set('types_travaux', e.target.value)} /></label>
@@ -646,7 +655,7 @@ export default function SaisieTerrain() {
 
           {activeSection === 'communication' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
-              <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>N — Communication</legend>
+              <SectionHeading code="N" title="Communication et présence en ligne" />
               <div className="form-grid">
                 <label>Site web <input type="url" value={form.site_web} onChange={e => set('site_web', e.target.value)} /></label>
                 <label>Email public <input type="email" value={form.email_public} onChange={e => set('email_public', e.target.value)} /></label>
@@ -659,7 +668,7 @@ export default function SaisieTerrain() {
 
           {activeSection === 'besoins' && (
             <fieldset style={{ border:'none', padding:0, margin:0 }}>
-              <legend style={{ fontSize:'16px', fontWeight:600, marginBottom:'12px' }}>O — Besoins et partenariats</legend>
+              <SectionHeading code="O" title="Besoins et partenariats" />
               <label>Défis principaux <textarea rows={3} value={form.defis_principaux} onChange={e => set('defis_principaux', e.target.value)} /></label>
               <label>Types d'appui nécessaire (séparés par virgule) <input type="text" value={form.types_appui_necessaire} onChange={e => set('types_appui_necessaire', e.target.value)} placeholder="ex: Formation, Livres, Équipements" /></label>
               <label>Appui prioritaire <input type="text" value={form.appui_prioritaire} onChange={e => set('appui_prioritaire', e.target.value)} /></label>
